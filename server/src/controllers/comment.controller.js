@@ -1,6 +1,7 @@
 import Comment from '../models/comment.model.js';
 import Task from '../models/task.model.js';
 import User from '../models/user.model.js';
+import activityModel from '../models/activity.model.js';
 
 const createComment = async (req, res) => {
     try {
@@ -16,6 +17,13 @@ const createComment = async (req, res) => {
         if (!user) {
             return res.status(404).json({ status: 'error', message: 'User not found' });
         }
+        await activityModel.create({
+            organization: task.project.organization,
+            project: task.project._id,
+            task: task._id,
+            user: user._id,
+            action: "COMMENT_ADDED",
+        });
         const comment = await Comment.create({ content, task, user });
         res.status(201).json({ status: 'success', message: 'Comment created successfully', comment });
     } catch (error) {
@@ -47,6 +55,13 @@ const updateComment = async (req, res) => {
         }
         comment.content = content;
         await comment.save();
+        await activityModel.create({
+            organization: comment.task.project.organization,
+            project: comment.task.project._id,
+            task: comment.task._id,
+            user: req.user.id,
+            action: "COMMENT_UPDATED",
+        });
         res.status(200).json({ status: 'success', message: 'Comment updated successfully', comment });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -65,6 +80,13 @@ const deleteComment = async (req, res) => {
         }
         
         await comment.deleteOne();
+        await activityModel.create({
+            organization: comment.task.project.organization,
+            project: comment.task.project._id,
+            task: comment.task._id,
+            user: req.user.id,
+            action: "COMMENT_DELETED",
+        });
         res.status(200).json({ status: 'success', message: 'Comment deleted successfully' });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });

@@ -1,4 +1,7 @@
 import Project from '../models/project.model.js';
+import Organization from '../models/organization.model.js';
+import User from '../models/user.model.js';
+import activityModel from '../models/activity.model.js';
 
 const createProject = async (req, res) => {
     try {
@@ -15,6 +18,12 @@ const createProject = async (req, res) => {
             return res.status(403).json({status: 'error', message: 'You are not a member of this organization'});
         }
         const project = await Project.create({ name, description, organization, createdBy: req.user.id });
+        await activityModel.create({
+            organization: organizationExists._id,
+            project: project._id,
+            user: req.user._id,
+            action: "PROJECT_CREATED",
+        });
         res.status(201).json({ status: 'success', message: 'Project created successfully', project });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });

@@ -1,50 +1,7 @@
 import Attachment from '../models/attachment.model.js';
 import Task from '../models/task.model.js';
-
-
-// POST   /api/tasks/:taskId/attachments
-
-// GET    /api/tasks/:taskId/attachments
-
-// DELETE /api/attachments/:attachmentId
-
-// const attachmentSchema = new mongoose.Schema(
-//     {
-//         task: {
-//             type: mongoose.Schema.Types.ObjectId,    
-//             ref: 'Task',
-//             required: true,
-//         },
-//         uploadedBy: {
-//             type: mongoose.Schema.Types.ObjectId,
-//             ref: 'User',
-//             required: true,
-//         },
-//         fileName: {
-//             type: String,
-//             required: true,
-//         },
-//         fileUrl: {
-//             type: String,
-//             required: true,
-//         },
-//         fileType: {
-//             type: String,
-//             required: true,
-//         },
-//         fileSize: {
-//             type: Number,
-//             required: true,
-//         },
-//     },
-//     {
-//         timestamps: true,
-//     }
-// )
-
-// const Attachment = mongoose.model('Attachment', attachmentSchema);
-
-// export default Attachment;
+import User from '../models/user.model.js';
+import activityModel from '../models/activity.model.js';
 
 const createAttachment = async (req, res) => {
     try {
@@ -60,6 +17,13 @@ const createAttachment = async (req, res) => {
             return res.status(404).json({ status: 'error', message: 'Task not found' });
         }
         const attachment = await Attachment.create({ task : taskId, uploadedBy: req.user.id, fileName, fileUrl, fileType, fileSize });
+        await activityModel.create({
+            organization: task.project.organization,
+            project: task.project._id,
+            task: task._id,
+            user: req.user.id,
+            action: "ATTACHMENT_UPLOADED",
+        });
         res.status(201).json({ status: 'success', message: 'Attachment created successfully', attachment });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -97,6 +61,13 @@ const deleteAttachment = async (req, res) => {
             return res.status(403).json({ status: 'error', message: 'You are not authorized to delete this attachment' });
         }
         await attachment.deleteOne();
+        await activityModel.create({
+            organization: attachment.task.project.organization,
+            project: attachment.task.project._id,
+            task: attachment.task._id,
+            user: req.user.id,
+            action: "ATTACHMENT_DELETED",
+        });
         res.status(200).json({ status: 'success', message: 'Attachment deleted successfully' });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });

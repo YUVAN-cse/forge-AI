@@ -1,4 +1,6 @@
 import organizationModel from '../models/organization.model.js';
+import userModel from '../models/user.model.js';
+import activityModel from '../models/activity.model.js';
 
 const createOrganization = async (req, res) => {
     try {
@@ -57,6 +59,13 @@ const addMemberToOrganization = async (req, res) => {
 
         organization.members.push(user._id);
         await organization.save();
+        await activityModel.create({
+            organization: organization._id,
+            project: null,
+            task: null,
+            user: user._id,
+            action: "MEMBER_ADDED",
+        });
         res.status(200).json({ status: 'success', message: 'Member added to organization successfully' });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -88,6 +97,13 @@ const removeMemberFromOrganization = async (req, res) => {
         if (index !== -1) {
             organization.members.splice(index, 1);
             await organization.save();
+            await activityModel.create({
+                organization: organization._id,
+                project: null,
+                task: null,
+                user: user._id,
+                action: "MEMBER_REMOVED",
+            });
             res.status(200).json({ status: 'success', message: 'Member removed from organization successfully' });
         } else {
             res.status(404).json({ status: 'error', message: 'Member not found in organization' });

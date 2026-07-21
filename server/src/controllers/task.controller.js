@@ -2,6 +2,7 @@ import Task from '../models/task.model.js';
 import Project from '../models/project.model.js';
 import Organization from '../models/organization.model.js';
 import User from '../models/user.model.js';
+import activityModel from '../models/activity.model.js';
 
 const createTask = async (req, res) => {
     try {
@@ -75,6 +76,15 @@ const createTask = async (req, res) => {
             project,
             dueDate,
             createdBy: req.user._id
+        });
+
+        
+        await activityModel.create({
+            organization: organization._id,
+            project: projectExists._id,
+            task: task._id,
+            user: req.user._id,
+            action: "TASK_CREATED",
         });
 
         res.status(201).json({
@@ -154,6 +164,14 @@ const updateTask = async (req, res) => {
 
         await task.save();
 
+        await activityModel.create({
+            organization: task.project.organization,
+            project: task.project._id,
+            task: task._id,
+            user: req.user.id,
+            action: "TASK_UPDATED",
+        });
+
         res.status(200).json({
             status: "success",
             message: "Task updated successfully",
@@ -181,6 +199,14 @@ const deleteTask = async (req, res) => {
         }
 
         await task.deleteOne();
+
+        await activityModel.create({
+            organization: task.project.organization,
+            project: task.project._id,
+            task: task._id,
+            user: req.user.id,
+            action: "TASK_DELETED",
+        });
 
         res.status(200).json({
             status: "success",
