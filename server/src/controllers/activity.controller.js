@@ -1,6 +1,6 @@
-import activityModel from "../models/activity.model";
-import Task from "../models/task.model";
-import Project from "../models/project.model";
+import activityModel from "../models/activity.model.js";
+import Task from "../models/task.model.js";
+import Project from "../models/project.model.js";
 
 
 // GET /api/projects/:projectId/activity

@@ -1,8 +1,7 @@
-import Attachment from '../models/attachment.model.js';
 import Task from '../models/task.model.js';
 import User from '../models/user.model.js';
 import activityModel from '../models/activity.model.js';
-
+import Attachment from '../models/attachment.model.js';
 const createAttachment = async (req, res) => {
     try {
         const { fileName, fileUrl, fileType, fileSize , taskId} = req.body;

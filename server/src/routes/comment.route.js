@@ -1,4 +1,4 @@
-import { createComment, getCommentsByTaskId, updateComment, deleteComment } from '../controllers/task.controller.js';
+import { createComment, getCommentsByTaskId, updateComment, deleteComment } from '../controllers/comment.controller.js';
 import auth from '../middleware/auth.middleware.js';
 import { Router } from 'express';
 

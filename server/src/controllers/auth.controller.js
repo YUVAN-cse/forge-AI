@@ -23,7 +23,7 @@ const register = async (req, res) => {
         delete userWithoutPassword.password;
         res.status(201).json({ status: 'success', message: 'User registered successfully', user: userWithoutPassword, token });
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        res.status(500).json({ status: 'errorr', message: error.message });
     }
 };
 
