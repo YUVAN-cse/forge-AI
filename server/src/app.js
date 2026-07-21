@@ -8,6 +8,7 @@ import taskRoutes from './routes/task.route.js';
 import commentRoutes from './routes/comment.route.js';
 import attachmentRoutes from './routes/attachment.route.js';
 import messageRoutes from './routes/message.route.js';
+import cookieParser from 'cookie-parser';
 
 const app = express();
 
@@ -16,6 +17,7 @@ app.use(cors({
     credentials: true,
 }));
 app.use(express.json());
+app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/organizations', organizationRoutes);
