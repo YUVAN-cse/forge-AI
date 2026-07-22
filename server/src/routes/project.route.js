@@ -6,7 +6,7 @@ import { Router } from 'express';
 const router = Router();
 
 router.post('/', auth, createProject);
-router.get('/:organizationId', auth, getProjectsByOrganizationId);
+router.get('/organization/:organizationId', auth, getProjectsByOrganizationId);
 router.get('/:id', auth, getProjectById);
 router.get('/:projectId/activity', auth, getActivityByProjectId);
 

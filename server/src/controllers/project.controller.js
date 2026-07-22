@@ -9,7 +9,7 @@ const createProject = async (req, res) => {
         if(!name || !description || !organization) {
             return res.status(400).json({status: 'error', message: 'Please provide all required fields'});
         }
-        const organizationExists = await Project.findOne({ organization });
+        const organizationExists = await Organization.findById(organization);
         if(!organizationExists) {
             return res.status(404).json({status: 'error', message: 'Organization not found'});
         }
@@ -33,7 +33,9 @@ const createProject = async (req, res) => {
 const getProjectsByOrganizationId = async (req, res) => {
     try {
         //user belongs to the organization
-        const organizationExists = await Project.findOne({ organization: req.params.organizationId });
+        const organizationExists = await Organization.findById(
+                                        req.params.organizationId
+                                    );
         if(!organizationExists) {
             return res.status(404).json({status: 'error', message: 'Organization not found'});
         }
@@ -51,17 +53,35 @@ const getProjectsByOrganizationId = async (req, res) => {
 const getProjectById = async (req, res) => {
     try {
         //user belongs to the organization
-        const organizationExists = await Project.findOne({ organization: req.params.organizationId });
-        if(!organizationExists) {
-            return res.status(404).json({status: 'error', message: 'Organization not found'});
+        const project = await Project.findById(req.params.id);
+
+        if (!project) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Project not found'
+            });
         }
-        const userIsMember = organizationExists.members.includes(req.user.id);
-        if(!userIsMember) {
-            return res.status(403).json({status: 'error', message: 'You are not a member of this organization'});
+
+        const organization = await Organization.findById(
+            project.organization
+        );
+
+        if (!organization) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Organization not found'
+            });
         }
-        const project = await Project.findById(req.params.id).populate('organization', '-members');
-        if(!project) {
-            return res.status(404).json({status: 'error', message: 'Project not found'});
+
+        const userIsMember = organization.members.some(
+            member => member.toString() === req.user.id.toString()
+        );
+
+        if (!userIsMember) {
+            return res.status(403).json({
+                status: 'error',
+                message: 'You are not a member of this organization'
+            });
         }
         res.status(200).json({ status: 'success', message: 'Project found successfully', project });
     } catch (error) {
