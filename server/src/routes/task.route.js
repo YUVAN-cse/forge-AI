@@ -6,8 +6,8 @@ import { Router } from 'express';
 const router = Router();
 
 router.post('/', auth, createTask);
-router.get('/:projectId', auth, getTasksByProjectId);
-router.put('/:taskId', auth, updateTask);
+router.get('/project/:projectId', auth, getTasksByProjectId);
+router.patch('/:taskId', auth, updateTask);
 router.delete('/:taskId', auth, deleteTask);
 router.get('/:taskId/activity', auth, getActivityByTaskId);
 

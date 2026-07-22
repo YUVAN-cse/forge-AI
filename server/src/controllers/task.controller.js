@@ -145,8 +145,9 @@ const getTasksByProjectId = async (req, res) => {
 
 const updateTask = async (req, res) => {
     try {
+        //populate project in task 
 
-        const task = await Task.findById(req.params.taskId);
+        const task = await Task.findById(req.params.taskId).populate("project");
 
         if (!task) {
             return res.status(404).json({
@@ -163,6 +164,7 @@ const updateTask = async (req, res) => {
         task.dueDate = req.body.dueDate ?? task.dueDate;
 
         await task.save();
+
 
         await activityModel.create({
             organization: task.project.organization,
