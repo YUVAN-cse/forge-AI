@@ -10,6 +10,13 @@ import {
     deleteTask,
 } from "@/services/task.service";
 
+import {
+    getCommentsByTaskId,
+    createComment,
+    updateComment,
+    deleteComment,
+} from "@/services/comment.service";
+
 import { getMembersOfOrganization } from "@/services/organization.service";
 
 export default function ProjectDetailsPage() {
@@ -29,6 +36,17 @@ export default function ProjectDetailsPage() {
 
     const [members, setMembers] = useState<any[]>([]);
     const [assignedTo, setAssignedTo] = useState("");   
+
+    const [selectedTask, setSelectedTask] = useState<any>(null);
+    const [comments, setComments] = useState<any[]>([]);
+    const [commentContent, setCommentContent] = useState("");
+    const [loadingComments, setLoadingComments] = useState(false);
+    const [creatingComment, setCreatingComment] = useState(false);
+
+    const [editingComment, setEditingComment] = useState<any>(null);
+    const [editContent, setEditContent] = useState("");
+    const [updatingComment, setUpdatingComment] = useState(false);
+    const [deletingComment, setDeletingComment] = useState<string | null>(null);
 
     const fetchProject = async () => {
         try {
@@ -72,6 +90,118 @@ export default function ProjectDetailsPage() {
             );
         }
     };
+
+    const handleOpenComments = async (task: any) => {
+        try {
+            setSelectedTask(task);
+            setLoadingComments(true);
+            setError("");
+
+            const response =
+                await getCommentsByTaskId(task._id);
+
+            setComments(response.comments || []);
+        } catch (error: any) {
+            setError(
+                error.response?.data?.message ||
+                "Failed to fetch comments"
+            );
+        } finally {
+            setLoadingComments(false);
+        }
+    };
+
+    const handleCreateComment = async () => {
+            if (!commentContent.trim() || !selectedTask) {
+                return;
+            }
+
+            try {
+                setCreatingComment(true);
+                setError("");
+
+                const response =
+                    await createComment(
+                        selectedTask._id,
+                        commentContent
+                    );
+
+                setComments((prev) => [
+                    response.comment,
+                    ...prev,
+                ]);
+
+                setCommentContent("");
+            } catch (error: any) {
+                setError(
+                    error.response?.data?.message ||
+                    "Failed to create comment"
+                );
+            } finally {
+                setCreatingComment(false);
+            }
+        };
+
+        const handleUpdateComment = async () => {
+            if (!editingComment || !editContent.trim()) {
+                return;
+            }
+
+            try {
+                setUpdatingComment(true);
+                setError("");
+
+                const response = await updateComment(
+                    editingComment._id,
+                    editContent
+                );
+
+                setComments((prev) =>
+                    prev.map((comment) =>
+                        comment._id === editingComment._id
+                            ? {
+                                ...comment,
+                                content: response.comment.content,
+                            }
+                            : comment
+                    )
+                );
+
+                setEditingComment(null);
+                setEditContent("");
+            } catch (error: any) {
+                setError(
+                    error.response?.data?.message ||
+                    "Failed to update comment"
+                );
+            } finally {
+                setUpdatingComment(false);
+            }
+        };
+
+        const handleDeleteComment = async (
+                commentId: string
+            ) => {
+                try {
+                    setDeletingComment(commentId);
+                    setError("");
+
+                    await deleteComment(commentId);
+
+                    setComments((prev) =>
+                        prev.filter(
+                            (comment) => comment._id !== commentId
+                        )
+                    );
+                } catch (error: any) {
+                    setError(
+                        error.response?.data?.message ||
+                        "Failed to delete comment"
+                    );
+                } finally {
+                    setDeletingComment(null);
+                }
+            };
 
     useEffect(() => {
     const fetchData = async () => {
@@ -370,11 +500,23 @@ const handleDeleteTask = async (
         >
             DONE
         </button>
+        
     </div>
+    <button
+    onClick={() => handleOpenComments(task)}
+    className="mt-3 rounded-md border border-gray-700 px-3 py-2 text-sm hover:bg-gray-800"
+>
+    Comments
+</button>
 </div>
+
                             ))
                         )}
+
+                        
                     </div>
+
+                    
                 </div>
 
                 {/* Activity */}
@@ -389,15 +531,121 @@ const handleDeleteTask = async (
                 </div>
 
                 {/* Comments */}
-                <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
-                    <h2 className="text-xl font-semibold">
-                        Comments
-                    </h2>
+                {selectedTask && (
+    <div className="mt-6 rounded-lg border border-gray-800 bg-gray-900 p-6">
+        <h2 className="text-xl font-semibold">
+            Comments — {selectedTask.title}
+        </h2>
 
-                    <p className="mt-2 text-gray-400">
-                        Comments will appear here.
-                    </p>
+        <div className="mt-4 flex gap-2">
+            <input
+                type="text"
+                placeholder="Write a comment..."
+                value={commentContent}
+                onChange={(e) =>
+                    setCommentContent(e.target.value)
+                }
+                className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 outline-none"
+            />
+
+            <button
+                onClick={handleCreateComment}
+                disabled={creatingComment}
+                className="rounded-md bg-white px-4 py-2 text-black disabled:opacity-50"
+            >
+                {creatingComment
+                    ? "Adding..."
+                    : "Comment"}
+            </button>
+        </div>
+
+        <div className="mt-6 space-y-3">
+            {comments.map((comment) => (
+    <div
+        key={comment._id}
+        className="rounded-md border border-gray-800 bg-gray-800 p-4"
+    >
+        {editingComment?._id === comment._id ? (
+            <div className="space-y-3">
+                <input
+                    type="text"
+                    value={editContent}
+                    onChange={(e) =>
+                        setEditContent(e.target.value)
+                    }
+                    className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 outline-none"
+                />
+
+                <div className="flex gap-2">
+                    <button
+                        onClick={handleUpdateComment}
+                        disabled={updatingComment}
+                        className="rounded-md bg-white px-3 py-2 text-sm text-black disabled:opacity-50"
+                    >
+                        {updatingComment
+                            ? "Saving..."
+                            : "Save"}
+                    </button>
+
+                    <button
+                        onClick={() => {
+                            setEditingComment(null);
+                            setEditContent("");
+                        }}
+                        className="rounded-md border border-gray-700 px-3 py-2 text-sm"
+                    >
+                        Cancel
+                    </button>
                 </div>
+            </div>
+        ) : (
+            <>
+                <p className="font-medium">
+                    {comment.user?.name}
+                </p>
+
+                <p className="mt-1 text-gray-300">
+                    {comment.content}
+                </p>
+
+                <p className="mt-2 text-xs text-gray-500">
+                    {new Date(
+                        comment.createdAt
+                    ).toLocaleString()}
+                </p>
+
+                <div className="mt-3 flex gap-2">
+                    <button
+                        onClick={() => {
+                            setEditingComment(comment);
+                            setEditContent(comment.content);
+                        }}
+                        className="text-sm text-gray-400 hover:text-white"
+                    >
+                        Edit
+                    </button>
+
+                    <button
+                        onClick={() =>
+                            handleDeleteComment(comment._id)
+                        }
+                        disabled={
+                            deletingComment === comment._id
+                        }
+                        className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+                    >
+                        {deletingComment === comment._id
+                            ? "Deleting..."
+                            : "Delete"}
+                    </button>
+                </div>
+            </>
+        )}
+    </div>
+))}
+        </div>
+    </div>
+)}
 
                 {/* Chat */}
                 <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">

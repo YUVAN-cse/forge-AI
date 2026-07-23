@@ -9,7 +9,7 @@ const createComment = async (req, res) => {
         if (!content || !taskId) {
             return res.status(400).json({ status: 'error', message: 'Please provide all required fields' });
         }
-        const task = await Task.findById(taskId);
+        const task = await Task.findById(taskId).populate("project");
         if (!task) {
             return res.status(404).json({ status: 'error', message: 'Task not found' });
         }
@@ -24,7 +24,7 @@ const createComment = async (req, res) => {
             user: user._id,
             action: "COMMENT_ADDED",
         });
-        const comment = await Comment.create({ content, task, user });
+        const comment = await Comment.create({ content, task : task._id, user: user._id});
         res.status(201).json({ status: 'success', message: 'Comment created successfully', comment });
     } catch (error) {
         res.status(500).json({ status: 'error', message: error.message });
@@ -33,7 +33,7 @@ const createComment = async (req, res) => {
 
 const getCommentsByTaskId = async (req, res) => {
     try {
-        const task = await Task.findById(req.params.taskId);        
+        const task = await Task.findById(req.params.taskId).populate("project");        
         if (!task) {
             return res.status(404).json({ status: 'error', message: 'Task not found' });
         }
@@ -49,9 +49,17 @@ const getCommentsByTaskId = async (req, res) => {
 const updateComment = async (req, res) => {
     try {
         const { content } = req.body;
-        const comment = await Comment.findById(req.params.commentId);
+        const comment = await Comment.findById(req.params.commentId).populate({
+            path: 'task',
+            populate: {
+                path: 'project'
+            },
+        });
         if (!comment) {
             return res.status(404).json({ status: 'error', message: 'Comment not found' });
+        }
+        if(comment.user.toString() !== req.user.id.toString()) {
+            return res.status(403).json({ status: 'error', message: 'You are not authorized to update this comment' });
         }
         comment.content = content;
         await comment.save();
@@ -71,7 +79,12 @@ const updateComment = async (req, res) => {
 
 const deleteComment = async (req, res) => {
     try {
-        const comment = await Comment.findById(req.params.commentId);
+        const comment = await Comment.findById(req.params.commentId).populate({
+            path: 'task',
+            populate: {
+                path: 'project'
+            },
+        });
         if (!comment) {
             return res.status(404).json({ status: 'error', message: 'Comment not found' });
         }
