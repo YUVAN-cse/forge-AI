@@ -10,6 +10,16 @@ import {
     deleteTask,
 } from "@/services/task.service";
 
+
+
+import socket from "@/lib/socket";
+
+import {
+    getMessagesByProjectId,
+} from "@/services/message.service";
+
+import { getProjectActivity } from "@/services/activity.service";
+
 import {
     getCommentsByTaskId,
     createComment,
@@ -50,6 +60,13 @@ export default function ProjectDetailsPage() {
     const [updatingComment, setUpdatingComment] = useState(false);
     const [deletingComment, setDeletingComment] = useState<string | null>(null);
 
+    const [messages, setMessages] = useState<any[]>([]);
+    const [messageContent, setMessageContent] = useState("");   
+
+    const [activities, setActivities] = useState<any[]>([]);
+    const [loadingActivities, setLoadingActivities] = useState(false);
+
+
     const fetchProject = async () => {
         try {
             const response =
@@ -61,6 +78,27 @@ export default function ProjectDetailsPage() {
                 error.response?.data?.message ||
                 "Failed to fetch project"
             );
+        }
+    };
+
+    const fetchProjectActivity = async () => {
+        try {
+            setLoadingActivities(true);
+
+            const response =
+                await getProjectActivity(projectId);
+
+            setActivities(
+                response.activities || []
+            );
+
+        } catch (error: any) {
+            setError(
+                error.response?.data?.message ||
+                "Failed to fetch project activity"
+            );
+        } finally {
+            setLoadingActivities(false);
         }
     };
 
@@ -205,6 +243,40 @@ export default function ProjectDetailsPage() {
                 }
             };
 
+            const handleSendMessage = () => {
+    if (!messageContent.trim()) {
+        return;
+    }
+
+    if (!socket.connected) {
+        console.error(
+            "Socket is not connected"
+        );
+        return;
+    }
+
+    socket.emit(
+        "send_message",
+        {
+            projectId,
+            content: messageContent.trim(),
+        }
+    );
+
+    setMessageContent("");
+};
+
+const handleDeleteMessage = (
+    messageId: string
+) => {
+    socket.emit(
+        "delete_message",
+        {
+            messageId,
+        }
+    );
+};
+
     useEffect(() => {
     const fetchData = async () => {
         try {
@@ -221,18 +293,26 @@ export default function ProjectDetailsPage() {
 
             const [
                 tasksResponse,
-                membersResponse
+                membersResponse,
+                activityResponse
             ] = await Promise.all([
                 getTasksByProjectId(projectId),
                 getMembersOfOrganization(
                     currentProject.organization
                 ),
+                getProjectActivity(projectId),
             ]);
 
             setTasks(tasksResponse.tasks || []);
+
             setMembers(
                 membersResponse.members || []
             );
+
+            setActivities(
+                activityResponse.activities || []
+            );
+
 
             } catch (error: any) {
                 setError(
@@ -246,6 +326,150 @@ export default function ProjectDetailsPage() {
 
         fetchData();
     }, [projectId]);
+
+
+    useEffect(() => {
+    if (!projectId) {
+        return;
+    }
+
+    const initializeChat = async () => {
+        try {
+            // Get old messages
+            const response =
+                await getMessagesByProjectId(
+                    projectId
+                );
+
+            setMessages(
+                response.data || []
+            );
+
+            // Get JWT
+            const token =
+                localStorage.getItem(
+                    "token"
+                );
+
+            if (!token) {
+                console.error(
+                    "Authentication token not found"
+                );
+                return;
+            }
+
+            // Give JWT to Socket.IO
+            socket.auth = {
+                token,
+            };
+
+            // Connect
+            socket.connect();
+
+            // Join project room
+            socket.emit(
+                "join_project",
+                projectId
+            );
+
+
+            
+
+        } catch (error: any) {
+            console.error(
+                error.response?.data?.message ||
+                "Failed to initialize chat"
+            );
+        }
+    };
+
+    const handleReceiveMessage = (
+        message: any
+    ) => {
+        setMessages((prev) => [
+            ...prev,
+            message,
+        ]);
+    };
+
+    const handleMessageDeleted = (
+        data: any
+    ) => {
+        setMessages((prev) =>
+            prev.filter(
+                (message) =>
+                    message._id !==
+                    data.messageId
+            )
+        );
+    };
+
+    const handleJoinError = (
+        data: any
+    ) => {
+        console.error(
+            "Failed to join project:",
+            data.message
+        );
+    };
+
+    const handleDeleteMessageError = (
+    data: any
+) => {
+    console.error(
+        "Delete message error:",
+        data.message
+    );
+};
+
+socket.on(
+    "receive_message",
+    handleReceiveMessage
+);
+
+socket.on(
+    "message_deleted",
+    handleMessageDeleted
+);
+
+socket.on(
+    "join_project_error",
+    handleJoinError
+);
+
+socket.on(
+    "delete_message_error",
+    handleDeleteMessageError
+);
+
+
+initializeChat();
+
+    return () => {
+    socket.off(
+        "receive_message",
+        handleReceiveMessage
+    );
+
+    socket.off(
+        "message_deleted",
+        handleMessageDeleted
+    );
+
+    socket.off(
+        "join_project_error",
+        handleJoinError
+    );
+
+    socket.off(
+        "delete_message_error",
+        handleDeleteMessageError
+    );
+
+    socket.disconnect();
+};
+
+}, [projectId]);
 
     const handleCreateTask = async () => {
             if (
@@ -457,15 +681,41 @@ const handleDeleteTask = async (
                 </div>
 
                 {/* Activity */}
-                <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
-                    <h2 className="text-xl font-semibold">
-                        Activity
-                    </h2>
+<div className="rounded-lg border border-gray-800 bg-gray-900 p-6 h-[500px] flex flex-col">
+    <h2 className="text-xl font-semibold">
+        Activity
+    </h2>
 
-                    <p className="mt-2 text-gray-400">
-                        Activity will appear here.
+    <div className="mt-4 flex-1 overflow-y-auto space-y-3 pr-2">
+        {activities.length === 0 ? (
+            <p className="text-sm text-gray-400">
+                No activity yet.
+            </p>
+        ) : (
+            activities.map((activity: any) => (
+                <div
+                    key={activity._id}
+                    className="rounded-md border border-gray-800 bg-gray-950 p-3"
+                >
+                    <p className="text-sm text-gray-300">
+                        <span className="font-medium text-white">
+                            {activity.user?.name || "Unknown User"}
+                        </span>{" "}
+                        {activity.action
+                            ?.toLowerCase()
+                            .replaceAll("_", " ")}
+                    </p>
+
+                    <p className="mt-1 text-xs text-gray-500">
+                        {new Date(
+                            activity.createdAt
+                        ).toLocaleString()}
                     </p>
                 </div>
+            ))
+        )}
+    </div>
+</div>
 
                 {/* Comments */}
                 {selectedTask && (
@@ -587,15 +837,96 @@ const handleDeleteTask = async (
 
 
                 {/* Chat */}
-                <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
-                    <h2 className="text-xl font-semibold">
-                        Chat
-                    </h2>
+<div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+    <h2 className="text-xl font-semibold">
+        Project Chat
+    </h2>
 
-                    <p className="mt-2 text-gray-400">
-                        Real-time chat will appear here.
-                    </p>
-                </div>
+    {/* Messages */}
+    <div className="mt-6 h-96 space-y-4 overflow-y-auto rounded-md border border-gray-800 bg-gray-950 p-4">
+
+        {messages.length === 0 ? (
+            <p className="text-sm text-gray-400">
+                No messages yet.
+            </p>
+        ) : (
+            messages.map(
+                (message: any) => (
+                    <div
+                        key={message._id}
+                        className="flex items-start justify-between gap-4 rounded-md bg-gray-900 p-3"
+                    >
+                        <div>
+                            <p className="text-sm font-medium">
+                                {message.sender?.name ||
+                                    "Unknown User"}
+                            </p>
+
+                            <p className="mt-1 text-sm text-gray-300">
+                                {message.content}
+                            </p>
+
+                            <p className="mt-1 text-xs text-gray-500">
+                                {new Date(
+                                    message.createdAt
+                                ).toLocaleString()}
+                            </p>
+                        </div>
+                                <button
+                                    onClick={() =>
+                                        handleDeleteMessage(
+                                            message._id
+                                        )
+                                    }
+                                    className="text-sm text-red-400 hover:text-red-300"
+                                >
+                                    Delete
+                                </button>
+                          
+                    </div>
+                )
+            )
+        )}
+
+    </div>
+
+    {/* Send Message */}
+    <div className="mt-4 flex gap-2">
+
+        <input
+            type="text"
+            value={messageContent}
+            onChange={(e) =>
+                setMessageContent(
+                    e.target.value
+                )
+            }
+            onKeyDown={(e) => {
+                if (
+                    e.key === "Enter" &&
+                    !e.shiftKey
+                ) {
+                    e.preventDefault();
+
+                    handleSendMessage();
+                }
+            }}
+            placeholder="Type a message..."
+            className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 outline-none"
+        />
+
+        <button
+            onClick={handleSendMessage}
+            disabled={
+                !messageContent.trim()
+            }
+            className="rounded-md bg-white px-4 py-2 text-black disabled:opacity-50"
+        >
+            Send
+        </button>
+
+    </div>
+</div>
 
             </div>
         </div>

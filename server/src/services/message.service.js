@@ -1,6 +1,7 @@
 import Project from '../models/project.model.js';
 import Message from '../models/message.model.js';
 import User from '../models/user.model.js';
+import activityModel from '../models/activity.model.js';
 
 // Find project
 //     ↓
@@ -14,55 +15,74 @@ import User from '../models/user.model.js';
 
 // Save first, broadcast second.
 
-const createMessageService = async ({ projectId, userId, content }) => {
-    // Find project
+const createMessageService = async ({
+    projectId,
+    userId,
+    content,
+}) => {
     const project = await Project.findById(projectId);
+
     if (!project) {
-        throw new Error('Project not found');
+        throw new Error("Project not found");
     }
 
-    // Find user
-    const user = await User.findById(userId);
-    if (!user) {
-        throw new Error('User not found');
-    }
 
-    // Check project membership of user
-    if (!project.members.includes(user._id)) {
-        throw new Error('You are not a member of this project');
-    }
+    const message = await Message.create({
+        project: projectId,
+        sender: userId,
+        content,
+    });
 
-    // Create message
-    const message = await Message.create({ project: project._id, sender: user._id, content });
     await activityModel.create({
         organization: project.organization,
         project: project._id,
-        user: user._id,
+        user: userId,
         action: "MESSAGE_ADDED",
     });
-    return message;
+
+    return await Message.findById(message._id)
+        .populate("sender", "name email");
 };
 
-const deleteMessageService = async ({ messageId, userId }) => {
+const deleteMessageService = async ({
+    messageId,
+    userId,
+}) => {
     const message = await Message.findById(messageId);
+
     if (!message) {
-        throw new Error('Message not found');
+        throw new Error("Message not found");
     }
-    if (message.sender.toString() !== userId) {
-        throw new Error('You are not the sender of this message');
+
+    console.log("Message sender:", message.sender.toString());
+    console.log("Current user:", userId.toString());
+
+    if (
+        message.sender.toString() !==
+        userId.toString()
+    ) {
+        throw new Error(
+            "You are not the sender of this message"
+        );
     }
+
+    const project = await Project.findById(
+        message.project
+    );
+
     await message.deleteOne();
-    const project = await Project.findById(message.project);
-    if (!project) {
-        throw new Error('Project not found');
-    }
+
     await activityModel.create({
         organization: project.organization,
         project: project._id,
         user: userId,
         action: "MESSAGE_DELETED",
     });
-    return message;
+
+    return {
+        messageId: message._id,
+        projectId: message.project,
+    };
 };
 
 export { createMessageService, deleteMessageService };

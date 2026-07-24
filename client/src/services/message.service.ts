@@ -10,20 +10,20 @@ export const getMessagesByProjectId = async (
     return response.data;
 };
 
-export const createMessage = async (
-    projectId: string,
-    content: string
-) => {
-    const response = await api.post(
-        "/messages",
-        {
-            project: projectId,
-            content,
-        }
-    );
+// export const createMessage = async (
+//     projectId: string,
+//     content: string
+// ) => {
+//     const response = await api.post(
+//         "/messages",
+//         {
+//             project: projectId,
+//             content,
+//         }
+//     );
 
-    return response.data;
-};
+//     return response.data;
+// };
 
 export const deleteMessage = async (
     messageId: string

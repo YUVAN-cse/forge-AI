@@ -58,7 +58,10 @@ const activitySchema = new mongoose.Schema(
                 "ATTACHMENT_DELETED",
 
                 "MEMBER_ADDED",
-                "MEMBER_REMOVED"
+                "MEMBER_REMOVED",
+
+                "MESSAGE_ADDED",
+                "MESSAGE_DELETED",
             ],
             required: true,
         },

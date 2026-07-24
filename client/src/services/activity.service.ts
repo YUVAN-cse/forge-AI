@@ -9,3 +9,13 @@ export const getActivityByTaskId = async (
 
     return response.data;
 };
+
+export const getProjectActivity = async (
+    projectId: string
+) => {
+    const response = await api.get(
+        `/projects/${projectId}/activity`
+    );
+
+    return response.data;
+};

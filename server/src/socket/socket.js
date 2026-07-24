@@ -1,7 +1,12 @@
 import { Server } from 'socket.io';
 import socketAuth from '../middleware/socketAuth.middleware.js';
 import Project from '../models/project.model.js';
-import { createMessageService  , deleteMessageService} from '../services/message.service.js';
+import Organization from '../models/organization.model.js';
+
+import {
+    createMessageService,
+    deleteMessageService
+} from '../services/message.service.js';
 
 const initializeSocket = (server) => {
 
@@ -15,106 +20,228 @@ const initializeSocket = (server) => {
 
     io.on('connection', (socket) => {
 
-        console.log('User connected:', socket.id);
+        console.log(
+            'User connected:',
+            socket.id
+        );
 
-        console.log('Authenticated user:', socket.user.name);
+        console.log(
+            'Authenticated user:',
+            socket.user.name
+        );
 
         socket.on('disconnect', () => {
-            console.log('User disconnected:', socket.id);
+            console.log(
+                'User disconnected:',
+                socket.id
+            );
         });
 
 
-        socket.on('join_project', async (projectId) => {
-            try {
-                const project = await Project.findById(projectId);
+        // JOIN PROJECT CHAT
+        socket.on(
+            'join_project',
+            async (projectId) => {
 
-                if (!project) {
-                    return socket.emit('join_project_error', {
-                        message: 'Project not found'
-                    });
-                }
+                try {
 
-                const isMember = project.members.some(
-                    member => member.toString() === socket.user._id.toString()
-                );
+                    if (!projectId) {
+                        return socket.emit(
+                            'join_project_error',
+                            {
+                                message:
+                                    'Project ID is required'
+                            }
+                        );
+                    }
 
-                if (!isMember) {
-                    return socket.emit('join_project_error', {
-                        message: 'You are not a member of this project'
-                    });
-                }
+                    // Find project
+                    const project =
+                        await Project.findById(
+                            projectId
+                        );
 
-                const room = `project:${projectId}`;
+                    if (!project) {
+                        return socket.emit(
+                            'join_project_error',
+                            {
+                                message:
+                                    'Project not found'
+                            }
+                        );
+                    }
 
-                socket.join(room);
+                    // Find organization
+                    const organization =
+                        await Organization.findById(
+                            project.organization
+                        );
 
-                socket.emit('joined_project', {
-                    projectId,
-                    message: 'Joined project successfully'
-                });
+                    if (!organization) {
+                        return socket.emit(
+                            'join_project_error',
+                            {
+                                message:
+                                    'Organization not found'
+                            }
+                        );
+                    }
 
-                console.log(
-                    `${socket.user.name} joined ${room}`
-                );
+                    // Check organization membership
+                    const isMember =
+                        organization.members.some(
+                            (member) =>
+                                member.toString() ===
+                                socket.user._id.toString()
+                        );
+
+                    if (!isMember) {
+                        return socket.emit(
+                            'join_project_error',
+                            {
+                                message:
+                                    'You are not a member of this organization'
+                            }
+                        );
+                    }
+
+                    // Create project chat room
+                    const room =
+                        `project:${projectId}`;
+
+                    socket.join(room);
+
+                    socket.emit(
+                        'joined_project',
+                        {
+                            projectId,
+                            message:
+                                'Joined project successfully'
+                        }
+                    );
+
+                    console.log(
+                        `${socket.user.name} joined ${room}`
+                    );
 
                 } catch (error) {
-                    socket.emit('join_project_error', {
-                        message: 'Failed to join project'
-                    });
-                }
 
-        });
-        //our key goal is first save the message to the database and then broadcast it to all members of the project. This way, we ensure that the message is persisted before notifying other users.
-        socket.on('send_message', async ({ projectId, content }) => {
-            try {
-                if (!projectId || !content) {
-                    return socket.emit('send_message_error', {
-                        message: 'Project ID and content are required'
-                    });
-                }
+                    console.error(
+                        'Join project error:',
+                        error
+                    );
 
-                const message = await createMessageService({
+                    socket.emit(
+                        'join_project_error',
+                        {
+                            message:
+                                error.message ||
+                                'Failed to join project'
+                        }
+                    );
+                }
+            }
+        );
+
+
+        // SEND MESSAGE
+        socket.on(
+    'send_message',
+    async ({ projectId, content }) => {
+
+        try {
+            console.log(
+                'SEND MESSAGE EVENT:',
+                {
+                    projectId,
+                    content,
+                    userId: socket.user._id
+                }
+            );
+
+            if (
+                !projectId ||
+                !content?.trim()
+            ) {
+                return socket.emit(
+                    'send_message_error',
+                    {
+                        message:
+                            'Project ID and content are required'
+                    }
+                );
+            }
+
+            const message =
+                await createMessageService({
                     projectId,
                     userId: socket.user._id,
-                    content
+                    content: content.trim()
                 });
 
-                const room = `project:${projectId}`;
+            console.log(
+                'MESSAGE CREATED:',
+                message
+            );
 
-                io.to(room).emit('receive_message', message);
+            const room =
+                `project:${projectId}`;
 
-            } catch (error) {
-                socket.emit('send_message_error', {
-                    message: error.message
-                });
-            }
-        });
+            console.log(
+                'BROADCASTING TO ROOM:',
+                room
+            );
 
-        socket.on('delete_message', async ({ messageId }) => {
-            try {
-                if (!messageId) {
-                    return socket.emit('delete_message_error', {
-                        message: 'Message ID is required'
-                    });
+            io.to(room).emit(
+                'receive_message',
+                message
+            );
+
+        } catch (error) {
+
+            console.error(
+                'SEND MESSAGE ERROR:',
+                error
+            );
+
+            socket.emit(
+                'send_message_error',
+                {
+                    message:
+                        error.message
                 }
+            );
+        }
+    }
+);
 
-                const result = await deleteMessageService({
-                    messageId,
-                    userId: socket.user._id
-                });
 
-                const room = `project:${result.projectId}`;
+        // DELETE MESSAGE
+        socket.on('delete_message', async ({ messageId }) => {
+    try {
+        if (!messageId) {
+            return socket.emit('delete_message_error', {
+                message: 'Message ID is required'
+            });
+        }
 
-                io.to(room).emit('message_deleted', {
-                    messageId: result.messageId
-                });
-
-            } catch (error) {
-                socket.emit('delete_message_error', {
-                    message: error.message
-                });
-            }
+        const result = await deleteMessageService({
+            messageId,
+            userId: socket.user._id
         });
+
+        const room = `project:${result.projectId}`;
+
+        io.to(room).emit('message_deleted', {
+            messageId: result.messageId
+        });
+
+    } catch (error) {
+        socket.emit('delete_message_error', {
+            message: error.message
+        });
+    }
+});
 
     });
 

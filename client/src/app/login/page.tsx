@@ -23,7 +23,22 @@ export default function LoginPage() {
             setLoading(true);
             setError("");
 
-            await login(email, password);
+            const response: any = await loginUser({
+                email,
+                password
+            }
+);
+
+await login(email, password);
+
+console.log("LOGIN RESPONSE:", response);
+
+localStorage.setItem(
+    "token",
+    response.token
+);
+
+router.push("/dashboard");
 
             router.push("/dashboard");
         } catch (error: any) {
