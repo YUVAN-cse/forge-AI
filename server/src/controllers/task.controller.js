@@ -176,7 +176,12 @@ const updateTask = async (req, res) => {
     try {
         const task = await Task.findById(
             req.params.taskId
-        );
+        ).populate({
+            path: "project",
+            populate: {
+                path: "organization",
+            },
+        });
 
         if (!task) {
             return res.status(404).json({
@@ -367,9 +372,71 @@ const deleteTask = async (req, res) => {
 };
 
 
+const getTaskById = async (req, res) => {
+    try {
+        if(!req.params.taskId) {
+            return res.status(400).json({
+                status: "error",
+                message: "Task ID is required"
+            });
+        }
+        const task = await Task.findById(req.params.taskId)
+            .populate("assignedTo", "name email")
+            .populate("createdBy", "name email")
+            .populate({
+                path: "project",
+                populate: {
+                    path: "organization",
+                    select: "name owner members",
+                },
+            });
+
+        if (!task) {
+            return res.status(404).json({
+                status: "error",
+                message: "Task not found",
+            });
+        }
+
+        const organization = task.project.organization;
+
+        const isOwner =
+            organization.owner.toString() ===
+            req.user.id.toString();
+
+        const isMember = organization.members.some(
+            (member) =>
+                member.toString() ===
+                req.user.id.toString()
+        );
+
+        if (!isOwner && !isMember) {
+            return res.status(403).json({
+                status: "error",
+                message:
+                    "You are not a member of this organization",
+            });
+        }
+
+        res.status(200).json({
+            status: "success",
+            message: "Task found successfully",
+            task,
+        });
+    } catch (error) {
+        res.status(500).json({
+            status: "error",
+            message: error.message,
+        });
+    }
+};
+
+
+
 export {
     createTask,
     getTasksByProjectId,
     updateTask,
-    deleteTask
+    deleteTask,
+    getTaskById
 };

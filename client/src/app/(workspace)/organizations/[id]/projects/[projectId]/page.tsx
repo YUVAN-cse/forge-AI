@@ -18,11 +18,13 @@ import {
 } from "@/services/comment.service";
 
 import { getMembersOfOrganization } from "@/services/organization.service";
+import Link from "next/link";
 
 export default function ProjectDetailsPage() {
     const params = useParams();
 
     const projectId = params.projectId as string;
+    const organizationId = params.id as string;
 
     const [project, setProject] = useState<any>(null);
     const [tasks, setTasks] = useState<any[]>([]);
@@ -422,95 +424,30 @@ const handleDeleteTask = async (
                             </p>
                         ) : (
                             tasks.map((task: any) => (
-                               <div
-    key={task._id}
-    className="rounded-md border border-gray-800 bg-gray-800 p-4"
->
-    <div className="flex items-start justify-between">
-        <div>
-            <h3 className="font-semibold">
-                {task.title}
-            </h3>
+    <Link
+        key={task._id}
+        href={`/organizations/${organizationId}/projects/${projectId}/tasks/${task._id}`}
+        className="block rounded-lg border border-gray-800 bg-gray-900 p-4 transition hover:border-gray-600"
+    >
+        <h3 className="text-lg font-semibold">
+            {task.title}
+        </h3>
 
-            <p className="mt-1 text-sm text-gray-400">
-                {task.description}
-            </p>
-            <p className="mt-1 text-sm text-gray-400">
-                {task.assignedTo
-                    ? `Assigned to: ${task.assignedTo.name} (${task.assignedTo.email})`
-                    : "Not assigned"}
-            </p>
+        <p className="mt-2 text-sm text-gray-400">
+            {task.description}
+        </p>
+
+        <div className="mt-3 flex gap-3 text-sm text-gray-400">
+            <span>
+                Status: {task.status}
+            </span>
+
+            <span>
+                Priority: {task.priority}
+            </span>
         </div>
-
-        <button
-            onClick={() =>
-                handleDeleteTask(task._id)
-            }
-            className="text-sm text-red-400 hover:text-red-300"
-        >
-            Delete
-        </button>
-    </div>
-
-    <div className="mt-4 flex gap-2">
-        <button
-            onClick={() =>
-                handleUpdateStatus(
-                    task._id,
-                    "TODO"
-                )
-            }
-            className={`rounded-md px-3 py-1 text-xs ${
-                task.status === "TODO"
-                    ? "bg-white text-black"
-                    : "bg-gray-700 text-gray-300"
-            }`}
-        >
-            TODO
-        </button>
-
-        <button
-            onClick={() =>
-                handleUpdateStatus(
-                    task._id,
-                    "IN_PROGRESS"
-                )
-            }
-            className={`rounded-md px-3 py-1 text-xs ${
-                task.status === "IN_PROGRESS"
-                    ? "bg-white text-black"
-                    : "bg-gray-700 text-gray-300"
-            }`}
-        >
-            IN PROGRESS
-        </button>
-
-        <button
-            onClick={() =>
-                handleUpdateStatus(
-                    task._id,
-                    "DONE"
-                )
-            }
-            className={`rounded-md px-3 py-1 text-xs ${
-                task.status === "DONE"
-                    ? "bg-white text-black"
-                    : "bg-gray-700 text-gray-300"
-            }`}
-        >
-            DONE
-        </button>
-        
-    </div>
-    <button
-    onClick={() => handleOpenComments(task)}
-    className="mt-3 rounded-md border border-gray-700 px-3 py-2 text-sm hover:bg-gray-800"
->
-    Comments
-</button>
-</div>
-
-                            ))
+    </Link>
+))
                         )}
 
                         
@@ -646,6 +583,8 @@ const handleDeleteTask = async (
         </div>
     </div>
 )}
+
+
 
                 {/* Chat */}
                 <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">

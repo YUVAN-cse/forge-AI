@@ -1,31 +1,39 @@
-import mongoose from 'mongoose';
-import Task from './task.model.js';
-import User from './user.model.js';
+import mongoose from "mongoose";
 
 const attachmentSchema = new mongoose.Schema(
     {
         task: {
-            type: mongoose.Schema.Types.ObjectId,    
-            ref: 'Task',
+            type: mongoose.Schema.Types.ObjectId,
+            ref: "Task",
             required: true,
         },
+
         uploadedBy: {
             type: mongoose.Schema.Types.ObjectId,
-            ref: 'User',
+            ref: "User",
             required: true,
         },
+
         fileName: {
             type: String,
             required: true,
         },
+
         fileUrl: {
             type: String,
             required: true,
         },
+
+        publicId: {
+            type: String,
+            required: true,
+        },
+
         fileType: {
             type: String,
             required: true,
         },
+
         fileSize: {
             type: Number,
             required: true,
@@ -34,8 +42,11 @@ const attachmentSchema = new mongoose.Schema(
     {
         timestamps: true,
     }
-)
+);
 
-const Attachment = mongoose.model('Attachment', attachmentSchema);
+const Attachment = mongoose.model(
+    "Attachment",
+    attachmentSchema
+);
 
 export default Attachment;

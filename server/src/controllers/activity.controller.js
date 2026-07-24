@@ -26,10 +26,10 @@ const getActivityByTaskId = async (req, res) => {
         if (!task) {
             return res.status(404).json({ status: 'error', message: 'Task not found' });
         }
-        const activities = await activityModel.find({ task: req.params.taskId }).populate('user', 'name email');
+        const activities = (await activityModel.find({ task: req.params.taskId }).populate('user', 'name email'));
         res.status(200).json({ status: 'success', message: 'Activities found successfully', activities });
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        res.status(500).json({ status: 'error', message: error.message }).reverse();
     }
 };
 

@@ -1,76 +1,238 @@
-import Task from '../models/task.model.js';
-import User from '../models/user.model.js';
-import activityModel from '../models/activity.model.js';
-import Attachment from '../models/attachment.model.js';
+import Task from "../models/task.model.js";
+import User from "../models/user.model.js";
+import Activity from "../models/activity.model.js";
+import Attachment from "../models/attachment.model.js";
+import { cloudinary, uploadToCloudinary } from "../utils/cloudinary.js";
+
 const createAttachment = async (req, res) => {
     try {
-        const { fileName, fileUrl, fileType, fileSize , taskId} = req.body;
-        if(!taskId) {
-            return res.status(400).json({ status: 'error', message: 'Task ID is required' });
+        const { taskId } = req.body;
+
+        if (!taskId) {
+            return res.status(400).json({
+                status: "error",
+                message: "Task ID is required",
+            });
         }
-        if (!fileName || !fileUrl || !fileType || !fileSize) {
-            return res.status(400).json({ status: 'error', message: 'Please provide all required fields' });
+
+        if (!req.file) {
+            return res.status(400).json({
+                status: "error",
+                message: "File is required",
+            });
         }
-        const task = await Task.findById(taskId);
+
+        const task = await Task.findById(taskId).populate({
+            path: "project",
+            populate: {
+                path: "organization",
+            },
+        });
+
         if (!task) {
-            return res.status(404).json({ status: 'error', message: 'Task not found' });
+            return res.status(404).json({
+                status: "error",
+                message: "Task not found",
+            });
         }
-        const attachment = await Attachment.create({ task : taskId, uploadedBy: req.user.id, fileName, fileUrl, fileType, fileSize });
-        await activityModel.create({
-            organization: task.project.organization,
+
+        const organization = task.project?.organization;
+
+        if (!organization) {
+            return res.status(404).json({
+                status: "error",
+                message: "Organization not found",
+            });
+        }
+
+        const isOwner =
+            organization.owner.toString() ===
+            req.user.id.toString();
+
+        const isMember = organization.members.some(
+            (member) =>
+                member.toString() === req.user.id.toString()
+        );
+
+        if (!isOwner && !isMember) {
+            return res.status(403).json({
+                status: "error",
+                message:
+                    "You are not a member of this organization",
+            });
+        }
+
+        const uploadedFile = await uploadToCloudinary(
+            req.file.buffer,
+            `forgeai/attachments/${taskId}`,
+            "auto"
+        );
+
+        const attachment = await Attachment.create({
+            task: task._id,
+            uploadedBy: req.user.id,
+            fileName: req.file.originalname,
+            fileUrl: uploadedFile.secure_url,
+            fileType: req.file.mimetype,
+            fileSize: req.file.size,
+            publicId: uploadedFile.public_id,
+        });
+
+        await Activity.create({
+            organization: organization._id,
             project: task.project._id,
             task: task._id,
             user: req.user.id,
             action: "ATTACHMENT_UPLOADED",
         });
-        res.status(201).json({ status: 'success', message: 'Attachment created successfully', attachment });
+
+        return res.status(201).json({
+            status: "success",
+            message: "Attachment uploaded successfully",
+            attachment,
+        });
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        return res.status(500).json({
+            status: "error",
+            message: error.message,
+        });
     }
 };
 
 const getAttachmentsByTaskId = async (req, res) => {
     try {
         const { taskId } = req.params;
-        if (!taskId) {
-            return res.status(400).json({ status: 'error', message: 'Task ID is required' });
-        }
-        const task = await Task.findById(taskId);
+
+        const task = await Task.findById(taskId).populate({
+            path: "project",
+            populate: {
+                path: "organization",
+            },
+        });
+
         if (!task) {
-            return res.status(404).json({ status: 'error', message: 'Task not found' });
+            return res.status(404).json({
+                status: "error",
+                message: "Task not found",
+            });
         }
-        const attachments = await Attachment.find({ task: taskId }).populate('uploadedBy', 'name email');
-        res.status(200).json({ status: 'success', message: 'Attachments found successfully', attachments });
+
+        const organization = task.project?.organization;
+
+        if (!organization) {
+            return res.status(404).json({
+                status: "error",
+                message: "Organization not found",
+            });
+        }
+
+        const isOwner =
+            organization.owner.toString() ===
+            req.user.id.toString();
+
+        const isMember = organization.members.some(
+            (member) =>
+                member.toString() === req.user.id.toString()
+        );
+
+        if (!isOwner && !isMember) {
+            return res.status(403).json({
+                status: "error",
+                message: "Unauthorized",
+            });
+        }
+
+        const attachments = await Attachment.find({
+            task: taskId,
+        })
+            .populate("uploadedBy", "name email")
+            .sort({ createdAt: -1 });
+
+        return res.status(200).json({
+            status: "success",
+            attachments,
+        });
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        return res.status(500).json({
+            status: "error",
+            message: error.message,
+        });
     }
 };
 
 const deleteAttachment = async (req, res) => {
     try {
         const { attachmentId } = req.params;
-        if (!attachmentId) {
-            return res.status(400).json({ status: 'error', message: 'Attachment ID is required' });
-        }
-        const attachment = await Attachment.findById(attachmentId);
+
+        const attachment = await Attachment.findById(
+            attachmentId
+        ).populate({
+            path: "task",
+            populate: {
+                path: "project",
+                populate: {
+                    path: "organization",
+                },
+            },
+        });
+
         if (!attachment) {
-            return res.status(404).json({ status: 'error', message: 'Attachment not found' });
+            return res.status(404).json({
+                status: "error",
+                message: "Attachment not found",
+            });
         }
-        if (attachment.uploadedBy.toString() !== req.user.id.toString()) {
-            return res.status(403).json({ status: 'error', message: 'You are not authorized to delete this attachment' });
+
+        if (
+            attachment.uploadedBy.toString() !==
+            req.user.id.toString()
+        ) {
+            return res.status(403).json({
+                status: "error",
+                message:
+                    "You are not authorized to delete this attachment",
+            });
         }
+
+        const task = attachment.task;
+        const project = task.project;
+        const organization = project.organization;
+
+        if (attachment.publicId) {
+            await cloudinary.uploader.destroy(
+                attachment.publicId,
+                {
+                    resource_type: "auto",
+                }
+            );
+        }
+
         await attachment.deleteOne();
-        await activityModel.create({
-            organization: attachment.task.project.organization,
-            project: attachment.task.project._id,
-            task: attachment.task._id,
+
+        await Activity.create({
+            organization: organization._id,
+            project: project._id,
+            task: task._id,
             user: req.user.id,
             action: "ATTACHMENT_DELETED",
         });
-        res.status(200).json({ status: 'success', message: 'Attachment deleted successfully' });
+
+        return res.status(200).json({
+            status: "success",
+            message: "Attachment deleted successfully",
+        });
     } catch (error) {
-        res.status(500).json({ status: 'error', message: error.message });
+        return res.status(500).json({
+            status: "error",
+            message: error.message,
+        });
     }
 };
 
-export { createAttachment, getAttachmentsByTaskId, deleteAttachment };
+
+
+export {
+    createAttachment,
+    getAttachmentsByTaskId,
+    deleteAttachment
+}

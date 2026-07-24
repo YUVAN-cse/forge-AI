@@ -43,10 +43,41 @@ export const updateTaskStatus = async (
     return response.data;
 };
 
+
+export const updateTask = async (
+    taskId: string,
+    data: {
+        title?: string;
+        description?: string;
+        status?: string;
+        priority?: string;
+        assignedTo?: string;
+        dueDate?: string;
+    }
+) => {
+    const response = await api.patch(
+        `/tasks/${taskId}`,
+        data
+    );
+
+    return response.data;
+};
+
 export const deleteTask = async (
     taskId: string
 ) => {
     const response = await api.delete(
+        `/tasks/${taskId}`
+    );
+
+    return response.data;
+};
+
+
+export const getTaskById = async (
+    taskId: string
+) => {
+    const response = await api.get(
         `/tasks/${taskId}`
     );
 
