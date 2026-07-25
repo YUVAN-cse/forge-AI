@@ -681,7 +681,7 @@ const handleDeleteTask = async (
                 </div>
 
                 {/* Activity */}
-<div className="rounded-lg border border-gray-800 bg-gray-900 p-6 h-[500px] flex flex-col">
+<div className="rounded-lg border border-gray-800 bg-gray-900 p-6 h-125 flex flex-col">
     <h2 className="text-xl font-semibold">
         Activity
     </h2>
