@@ -563,7 +563,7 @@ const handleDeleteTask = async (
     if (!project) {
         return (
             <div>
-                Project not found
+                Project doesn't exist
             </div>
         );
     }
