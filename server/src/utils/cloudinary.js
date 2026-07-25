@@ -9,7 +9,7 @@ cloudinary.config({
 const uploadToCloudinary = (
     buffer,
     folder,
-    resourceType = "auto"
+    resourceType = "raw"
 ) => {
     return new Promise((resolve, reject) => {
         const stream = cloudinary.uploader.upload_stream(

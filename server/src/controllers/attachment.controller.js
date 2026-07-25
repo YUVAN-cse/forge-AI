@@ -65,7 +65,7 @@ const createAttachment = async (req, res) => {
         const uploadedFile = await uploadToCloudinary(
             req.file.buffer,
             `forgeai/attachments/${taskId}`,
-            "auto"
+            "raw"
         );
 
         const attachment = await Attachment.create({
@@ -202,7 +202,7 @@ const deleteAttachment = async (req, res) => {
             await cloudinary.uploader.destroy(
                 attachment.publicId,
                 {
-                    resource_type: "auto",
+                    resource_type: "raw",
                 }
             );
         }
