@@ -2,6 +2,7 @@ import Project from '../models/project.model.js';
 import Organization from '../models/organization.model.js';
 import User from '../models/user.model.js';
 import activityModel from '../models/activity.model.js';
+import mongoose from 'mongoose';
 
 const createProject = async (req, res) => {
     try {
@@ -39,7 +40,7 @@ const getProjectsByOrganizationId = async (req, res) => {
         if(!organizationExists) {
             return res.status(404).json({status: 'error', message: 'Organization not found'});
         }
-        const userIsMember = organizationExists.members.includes(req.user.id);
+        const userIsMember = organizationExists.members.includes(new mongoose.Types.ObjectId(req.user.id));
         if(!userIsMember) {
             return res.status(403).json({status: 'error', message: 'You are not a member of this organization'});
         }
