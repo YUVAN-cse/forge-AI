@@ -6,7 +6,12 @@ import { registerUser } from "@/services/auth.service";
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth.store";
 
+import { useGuestGuard } from "@/hooks/useGuestGuard";
+
 export default function RegisterPage() {
+
+    useGuestGuard();
+
     const router = useRouter();
 
     const [name, setName] = useState("");

@@ -6,8 +6,13 @@ import { loginUser } from "@/services/auth.service";
 import Link from "next/link";
 import { useAuthStore } from "@/store/auth.store";
 
+import { useGuestGuard } from "@/hooks/useGuestGuard";
+
 
 export default function LoginPage() {
+
+    useGuestGuard();
+    
     const router = useRouter();
 
     const [email, setEmail] = useState("");
