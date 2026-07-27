@@ -12,6 +12,8 @@ import {
     deleteAttachment,
 } from "@/services/attachment.service";
 
+import { askTaskAI } from "@/services/ai.service";
+
 import {
     getCommentsByTaskId,
     createComment,
@@ -23,6 +25,7 @@ import {
     getActivityByTaskId,
 } from "@/services/activity.service";
 
+
 export default function TaskDetailsPage() {
     const params = useParams();
 
@@ -33,6 +36,19 @@ export default function TaskDetailsPage() {
     const [project, setProject] = useState<any>(null);
     const [task, setTask] = useState<any>(null);
     const [editingTask, setEditingTask] = useState(false);
+
+
+    const [aiQuestion, setAiQuestion] =
+    useState("");
+
+    const [aiAnswer, setAiAnswer] =
+        useState("");
+
+    const [askingAI, setAskingAI] =
+        useState(false);
+
+    const [aiError, setAiError] =
+        useState("");
 
     const [editTitle, setEditTitle] = useState("");
     const [editDescription, setEditDescription] = useState("");
@@ -120,6 +136,46 @@ export default function TaskDetailsPage() {
             setDeletingAttachment(null);
         }
     };
+
+
+    const handleAskTaskAI = async () => {
+    if (!aiQuestion.trim()) {
+        return;
+    }
+
+    try {
+        setAskingAI(true);
+        setAiError("");
+        setAiAnswer("");
+
+        const response =
+            await askTaskAI(
+                taskId,
+                aiQuestion.trim()
+            );
+
+        setAiAnswer(
+            response.answer ||
+            "No answer received."
+        );
+
+        setAiQuestion("");
+
+    } catch (error: any) {
+        console.error(
+            "Task AI Error:",
+            error
+        );
+
+        setAiError(
+            error.response?.data?.message ||
+            "Failed to get AI response"
+        );
+
+    } finally {
+        setAskingAI(false);
+    }
+};
 
     
 
@@ -860,6 +916,79 @@ const handleDeleteComment = async (
             ))
         )}
     </div>
+</div>
+
+
+<div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+
+    <h2 className="text-xl font-semibold">
+        🤖 ForgeAI Task Assistant
+    </h2>
+
+    <p className="mt-1 text-sm text-gray-400">
+        Get help understanding or completing this task.
+    </p>
+
+    <div className="mt-6 flex gap-2">
+
+        <input
+            type="text"
+            value={aiQuestion}
+            onChange={(e) =>
+                setAiQuestion(e.target.value)
+            }
+            onKeyDown={(e) => {
+                if (
+                    e.key === "Enter" &&
+                    !e.shiftKey
+                ) {
+                    e.preventDefault();
+
+                    handleAskTaskAI();
+                }
+            }}
+            placeholder="How should I approach this task?"
+            disabled={askingAI}
+            className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 outline-none disabled:opacity-50"
+        />
+
+        <button
+            onClick={handleAskTaskAI}
+            disabled={
+                askingAI ||
+                !aiQuestion.trim()
+            }
+            className="rounded-md bg-white px-4 py-2 text-black disabled:opacity-50"
+        >
+            {askingAI
+                ? "Thinking..."
+                : "Ask"}
+        </button>
+
+    </div>
+
+    {aiError && (
+        <div className="mt-4 rounded-md border border-red-900 bg-red-950 p-3">
+            <p className="text-sm text-red-400">
+                {aiError}
+            </p>
+        </div>
+    )}
+
+    {aiAnswer && (
+        <div className="mt-6 rounded-md border border-gray-800 bg-gray-950 p-4">
+
+            <p className="text-sm font-medium text-gray-400">
+                ForgeAI
+            </p>
+
+            <p className="mt-2 whitespace-pre-wrap text-sm leading-6 text-gray-200">
+                {aiAnswer}
+            </p>
+
+        </div>
+    )}
+
 </div>
 
         </div>

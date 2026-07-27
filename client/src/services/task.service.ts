@@ -14,7 +14,8 @@ export const createTask = async (
     projectId: string,
     title: string,
     description: string,
-    assignedTo?: string
+    assignedTo?: string,
+    priority?: string
 ) => {
     const response = await api.post(
         "/tasks",
@@ -23,6 +24,7 @@ export const createTask = async (
             title,
             description,
             assignedTo: assignedTo || undefined,
+            priority: priority || undefined,
         }
     );
 

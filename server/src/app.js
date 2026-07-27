@@ -9,6 +9,7 @@ import commentRoutes from './routes/comment.route.js';
 import attachmentRoutes from './routes/attachment.route.js';
 import messageRoutes from './routes/message.route.js';
 import cookieParser from 'cookie-parser';
+import aiRoutes from "./routes/ai.routes.js";
 
 const app = express();
 
@@ -26,6 +27,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/attachments', attachmentRoutes);
 app.use('/api/messages', messageRoutes);
+app.use('/api/ai', aiRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Forge API');

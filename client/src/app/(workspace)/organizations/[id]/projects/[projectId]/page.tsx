@@ -3,6 +3,9 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getProjectById } from "@/services/project.service";
+
+import { askProjectAI } from "@/services/ai.service";
+
 import {
     getTasksByProjectId,
     createTask,
@@ -19,6 +22,7 @@ import {
 } from "@/services/message.service";
 
 import { getProjectActivity } from "@/services/activity.service";
+import {getProjectSummary} from "@/services/ai.service";
 
 import {
     getCommentsByTaskId,
@@ -26,6 +30,10 @@ import {
     updateComment,
     deleteComment,
 } from "@/services/comment.service";
+
+import {
+    generateProjectTasks,
+} from "@/services/ai.service";
 
 import { getMembersOfOrganization } from "@/services/organization.service";
 import Link from "next/link";
@@ -39,6 +47,31 @@ export default function ProjectDetailsPage() {
     const [project, setProject] = useState<any>(null);
     const [tasks, setTasks] = useState<any[]>([]);
 
+    const [selectedGeneratedTasks, setSelectedGeneratedTasks] =
+    useState<number[]>([]);
+
+    const [projectSummary, setProjectSummary] =
+    useState("");
+
+    const [loadingSummary, setLoadingSummary] =
+        useState(false);
+
+    const [summaryError, setSummaryError] =
+        useState("");
+    
+
+    const [taskRequirement, setTaskRequirement] =
+    useState("");
+
+    const [generatedTasks, setGeneratedTasks] =
+        useState<any[]>([]);
+
+
+    const [generatingTasks, setGeneratingTasks] =
+        useState(false);
+
+    const [taskGenerationError, setTaskGenerationError] =
+        useState("");
     const [taskTitle, setTaskTitle] = useState("");
     const [taskDescription, setTaskDescription] = useState("");
 
@@ -66,6 +99,11 @@ export default function ProjectDetailsPage() {
     const [activities, setActivities] = useState<any[]>([]);
     const [loadingActivities, setLoadingActivities] = useState(false);
 
+    const [aiQuestion, setAiQuestion] = useState("");
+    const [aiAnswer, setAiAnswer] = useState("");
+    const [askingAI, setAskingAI] = useState(false);
+    const [aiError, setAiError] = useState("");
+
 
     const fetchProject = async () => {
         try {
@@ -80,6 +118,126 @@ export default function ProjectDetailsPage() {
             );
         }
     };
+
+
+    
+
+    const toggleGeneratedTask = (index: number) => {
+    setSelectedGeneratedTasks((prev) => {
+        if (prev.includes(index)) {
+            return prev.filter((item) => item !== index);
+        }
+
+        return [...prev, index];
+    });
+};
+
+const handleCreateSelectedTasks = async () => {
+    if (selectedGeneratedTasks.length === 0) {
+        return;
+    }
+
+    try {
+        setLoading(true);
+
+        const tasksToCreate =
+            generatedTasks.filter((_, index) =>
+                selectedGeneratedTasks.includes(index)
+            );
+
+        for (const task of tasksToCreate) {
+            await createTask(
+                projectId,
+                task.title,
+                task.description,
+                undefined,
+                task.priority
+            );
+        }
+
+        const response =
+            await getTasksByProjectId(projectId);
+
+        setTasks(
+            response.tasks || []
+        );
+
+        setGeneratedTasks([]);
+        setSelectedGeneratedTasks([]);
+        setTaskRequirement("");
+
+    } catch (error) {
+        console.error(
+            "Failed to create generated tasks:",
+            error
+        );
+    } finally {
+        setLoading(false);
+    }
+};
+
+
+    const handleGenerateTasks = async () => {
+    if (!taskRequirement.trim()) {
+        return;
+    }
+
+    try {
+        setGeneratingTasks(true);
+        setTaskGenerationError("");
+        setGeneratedTasks([]);
+
+        const response =
+            await generateProjectTasks(
+                projectId,
+                taskRequirement.trim()
+            );
+
+        setGeneratedTasks(
+            response.tasks || []
+        );
+
+    } catch (error: any) {
+        console.error(
+            "Task Generation Error:",
+            error
+        );
+
+        setTaskGenerationError(
+            error.response?.data?.message ||
+            "Failed to generate tasks"
+        );
+    } finally {
+        setGeneratingTasks(false);
+    }
+};
+
+    const handleGenerateSummary = async () => {
+    try {
+        setLoadingSummary(true);
+        setSummaryError("");
+
+        const response =
+            await getProjectSummary(projectId);
+
+        setProjectSummary(
+            response.summary || ""
+        );
+
+    } catch (error: any) {
+        console.error(
+            "Project Summary Error:",
+            error
+        );
+
+        setSummaryError(
+            error.response?.data?.message ||
+            "Failed to generate project summary"
+        );
+    } finally {
+        setLoadingSummary(false);
+    }
+};
 
     const fetchProjectActivity = async () => {
         try {
@@ -275,6 +433,42 @@ const handleDeleteMessage = (
             messageId,
         }
     );
+};
+
+const handleAskAI = async () => {
+    if (!aiQuestion.trim()) {
+        return;
+    }
+
+    try {
+        setAskingAI(true);
+        setAiError("");
+        setAiAnswer("");
+
+        const response = await askProjectAI(
+            projectId,
+            aiQuestion.trim()
+        );
+
+        setAiAnswer(
+            response.answer || "No answer received."
+        );
+
+        setAiQuestion("");
+
+    } catch (error: any) {
+        console.error(
+            "AI Assistant Error:",
+            error
+        );
+
+        setAiError(
+            error.response?.data?.message ||
+            "Failed to get AI response"
+        );
+    } finally {
+        setAskingAI(false);
+    }
 };
 
     useEffect(() => {
@@ -680,253 +874,503 @@ const handleDeleteTask = async (
                     
                 </div>
 
-                {/* Activity */}
-<div className="rounded-lg border border-gray-800 bg-gray-900 p-6 h-125 flex flex-col">
-    <h2 className="text-xl font-semibold">
-        Activity
-    </h2>
+                    {/* AI Task Generator */}
+                    <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
 
-    <div className="mt-4 flex-1 overflow-y-auto space-y-3 pr-2">
-        {activities.length === 0 ? (
-            <p className="text-sm text-gray-400">
-                No activity yet.
-            </p>
-        ) : (
-            activities.map((activity: any) => (
-                <div
-                    key={activity._id}
-                    className="rounded-md border border-gray-800 bg-gray-950 p-3"
-                >
-                    <p className="text-sm text-gray-300">
-                        <span className="font-medium text-white">
-                            {activity.user?.name || "Unknown User"}
-                        </span>{" "}
-                        {activity.action
-                            ?.toLowerCase()
-                            .replaceAll("_", " ")}
-                    </p>
-
-                    <p className="mt-1 text-xs text-gray-500">
-                        {new Date(
-                            activity.createdAt
-                        ).toLocaleString()}
-                    </p>
-                </div>
-            ))
-        )}
-    </div>
-</div>
-
-                {/* Comments */}
-                {selectedTask && (
-    <div className="mt-6 rounded-lg border border-gray-800 bg-gray-900 p-6">
+    <div>
         <h2 className="text-xl font-semibold">
-            Comments — {selectedTask.title}
+             AI Task Generator
         </h2>
 
-        <div className="mt-4 flex gap-2">
-            <input
-                type="text"
-                placeholder="Write a comment..."
-                value={commentContent}
-                onChange={(e) =>
-                    setCommentContent(e.target.value)
-                }
-                className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 outline-none"
-            />
+        <p className="mt-1 text-sm text-gray-400">
+            Describe a feature and let ForgeAI
+            break it into actionable tasks.
+        </p>
+    </div>
 
-            <button
-                onClick={handleCreateComment}
-                disabled={creatingComment}
-                className="rounded-md bg-white px-4 py-2 text-black disabled:opacity-50"
-            >
-                {creatingComment
-                    ? "Adding..."
-                    : "Comment"}
-            </button>
-        </div>
+    <textarea
+        value={taskRequirement}
+        onChange={(e) =>
+            setTaskRequirement(e.target.value)
+        }
+        placeholder="Example: Build JWT authentication with refresh tokens and Google OAuth..."
+        rows={4}
+        disabled={generatingTasks}
+        className="mt-6 w-full resize-none rounded-md border border-gray-700 bg-gray-800 p-3 outline-none disabled:opacity-50"
+    />
 
-        <div className="mt-6 space-y-3">
-            {comments.map((comment) => (
-    <div
-        key={comment._id}
-        className="rounded-md border border-gray-800 bg-gray-800 p-4"
+    <button
+        onClick={handleGenerateTasks}
+        disabled={
+            generatingTasks ||
+            !taskRequirement.trim()
+        }
+        className="mt-4 rounded-md bg-white px-4 py-2 text-sm text-black disabled:opacity-50"
     >
-        {editingComment?._id === comment._id ? (
-            <div className="space-y-3">
-                <input
-                    type="text"
-                    value={editContent}
-                    onChange={(e) =>
-                        setEditContent(e.target.value)
-                    }
-                    className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 outline-none"
-                />
+        {generatingTasks
+            ? "Generating..."
+            : "Generate Tasks"}
+    </button>
 
-                <div className="flex gap-2">
-                    <button
-                        onClick={handleUpdateComment}
-                        disabled={updatingComment}
-                        className="rounded-md bg-white px-3 py-2 text-sm text-black disabled:opacity-50"
-                    >
-                        {updatingComment
-                            ? "Saving..."
-                            : "Save"}
-                    </button>
+    {taskGenerationError && (
+        <div className="mt-4 rounded-md border border-red-900 bg-red-950 p-3">
+            <p className="text-sm text-red-400">
+                {taskGenerationError}
+            </p>
+        </div>
+    )}
 
-                    <button
-                        onClick={() => {
-                            setEditingComment(null);
-                            setEditContent("");
-                        }}
-                        className="rounded-md border border-gray-700 px-3 py-2 text-sm"
-                    >
-                        Cancel
-                    </button>
+    {generatedTasks.length > 0 && (
+        <div className="mt-6 space-y-4">
+
+            <h3 className="font-medium">
+                Generated Tasks
+            </h3>
+
+            {generatedTasks.map(
+    (task, index) => {
+        const isSelected =
+            selectedGeneratedTasks.includes(index);
+
+        return (
+            <div
+                key={index}
+                onClick={() =>
+                    toggleGeneratedTask(index)
+                }
+                className={`cursor-pointer rounded-md border p-4 transition ${
+                    isSelected
+                        ? "border-white bg-gray-800"
+                        : "border-gray-800 bg-gray-950"
+                }`}
+            >
+                <div className="flex items-start gap-3">
+
+                    <input
+                        type="checkbox"
+                        checked={isSelected}
+                        onChange={() =>
+                            toggleGeneratedTask(index)
+                        }
+                        onClick={(e) =>
+                            e.stopPropagation()
+                        }
+                    />
+
+                    <div className="flex-1">
+
+                        <div className="flex items-center justify-between">
+                            <h4 className="font-medium">
+                                {task.title}
+                            </h4>
+
+                            <span className="text-xs text-gray-400">
+                                {task.priority}
+                            </span>
+                        </div>
+
+                        <p className="mt-2 text-sm text-gray-400">
+                            {task.description}
+                        </p>
+
+                    </div>
+
                 </div>
             </div>
-        ) : (
-            <>
-                <p className="font-medium">
-                    {comment.user?.name}
-                </p>
-
-                <p className="mt-1 text-gray-300">
-                    {comment.content}
-                </p>
-
-                <p className="mt-2 text-xs text-gray-500">
-                    {new Date(
-                        comment.createdAt
-                    ).toLocaleString()}
-                </p>
-
-                <div className="mt-3 flex gap-2">
-                    <button
-                        onClick={() => {
-                            setEditingComment(comment);
-                            setEditContent(comment.content);
-                        }}
-                        className="text-sm text-gray-400 hover:text-white"
-                    >
-                        Edit
-                    </button>
-
-                    <button
-                        onClick={() =>
-                            handleDeleteComment(comment._id)
-                        }
-                        disabled={
-                            deletingComment === comment._id
-                        }
-                        className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
-                    >
-                        {deletingComment === comment._id
-                            ? "Deleting..."
-                            : "Delete"}
-                    </button>
-                </div>
-            </>
-        )}
-    </div>
-))}
-        </div>
-    </div>
+        );
+    }
 )}
 
+{generatedTasks.length > 0 && (
+    <button
+        onClick={
+            handleCreateSelectedTasks
+        }
+        disabled={
+            selectedGeneratedTasks.length === 0 ||
+            loading
+        }
+        className="mt-6 rounded-md bg-white px-4 py-2 text-sm text-black disabled:opacity-50"
+    >
+        {loading
+            ? "Creating Tasks..."
+            : `Create Selected Tasks (${selectedGeneratedTasks.length})`}
+    </button>
+)}
 
+        </div>
+    )}
 
-                {/* Chat */}
-<div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
-    <h2 className="text-xl font-semibold">
-        Project Chat
-    </h2>
-
-    {/* Messages */}
-    <div className="mt-6 h-96 space-y-4 overflow-y-auto rounded-md border border-gray-800 bg-gray-950 p-4">
-
-        {messages.length === 0 ? (
-            <p className="text-sm text-gray-400">
-                No messages yet.
-            </p>
-        ) : (
-            messages.map(
-                (message: any) => (
-                    <div
-                        key={message._id}
-                        className="flex items-start justify-between gap-4 rounded-md bg-gray-900 p-3"
-                    >
-                        <div>
-                            <p className="text-sm font-medium">
-                                {message.sender?.name ||
-                                    "Unknown User"}
-                            </p>
-
-                            <p className="mt-1 text-sm text-gray-300">
-                                {message.content}
-                            </p>
-
-                            <p className="mt-1 text-xs text-gray-500">
-                                {new Date(
-                                    message.createdAt
-                                ).toLocaleString()}
-                            </p>
-                        </div>
-                                <button
-                                    onClick={() =>
-                                        handleDeleteMessage(
-                                            message._id
-                                        )
-                                    }
-                                    className="text-sm text-red-400 hover:text-red-300"
-                                >
-                                    Delete
-                                </button>
-                          
                     </div>
-                )
-            )
-        )}
 
-    </div>
+                    {/* Activity */}
+                    <div className="rounded-lg border border-gray-800 bg-gray-900 p-6 h-125 flex flex-col">
+                        <h2 className="text-xl font-semibold">
+                            Activity
+                        </h2>
 
-    {/* Send Message */}
-    <div className="mt-4 flex gap-2">
+                        <div className="mt-4 flex-1 overflow-y-auto space-y-3 pr-2">
+                            {activities.length === 0 ? (
+                                <p className="text-sm text-gray-400">
+                                    No activity yet.
+                                </p>
+                            ) : (
+                                activities.map((activity: any) => (
+                                    <div
+                                        key={activity._id}
+                                        className="rounded-md border border-gray-800 bg-gray-950 p-3"
+                                    >
+                                        <p className="text-sm text-gray-300">
+                                            <span className="font-medium text-white">
+                                                {activity.user?.name || "Unknown User"}
+                                            </span>{" "}
+                                            {activity.action
+                                                ?.toLowerCase()
+                                                .replaceAll("_", " ")}
+                                        </p>
 
-        <input
-            type="text"
-            value={messageContent}
-            onChange={(e) =>
-                setMessageContent(
-                    e.target.value
-                )
-            }
-            onKeyDown={(e) => {
-                if (
-                    e.key === "Enter" &&
-                    !e.shiftKey
-                ) {
-                    e.preventDefault();
+                                        <p className="mt-1 text-xs text-gray-500">
+                                            {new Date(
+                                                activity.createdAt
+                                            ).toLocaleString()}
+                                        </p>
+                                    </div>
+                                ))
+                            )}
+                        </div>
+                    </div>
 
-                    handleSendMessage();
-                }
-            }}
-            placeholder="Type a message..."
-            className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 outline-none"
-        />
+                    {/* AI Assistant */}
+                    <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <h2 className="text-xl font-semibold">
+                                    ForgeAI Assistant
+                                </h2>
 
-        <button
-            onClick={handleSendMessage}
-            disabled={
-                !messageContent.trim()
-            }
-            className="rounded-md bg-white px-4 py-2 text-black disabled:opacity-50"
-        >
-            Send
-        </button>
+                                <p className="mt-1 text-sm text-gray-400">
+                                    Ask questions about your project.
+                                </p>
+                            </div>
+                        </div>
 
-    </div>
-</div>
+                        {/* Question Input */}
+                        <div className="mt-6 flex gap-2">
+                            <input
+                                type="text"
+                                value={aiQuestion}
+                                onChange={(e) =>
+                                    setAiQuestion(e.target.value)
+                                }
+                                onKeyDown={(e) => {
+                                    if (
+                                        e.key === "Enter" &&
+                                        !e.shiftKey
+                                    ) {
+                                        e.preventDefault();
+
+                                        handleAskAI();
+                                    }
+                                }}
+                                placeholder="Ask something about this project..."
+                                disabled={askingAI}
+                                className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 outline-none disabled:opacity-50"
+                            />
+
+                            <button
+                                onClick={handleAskAI}
+                                disabled={
+                                    askingAI ||
+                                    !aiQuestion.trim()
+                                }
+                                className="rounded-md bg-white px-4 py-2 text-black disabled:opacity-50"
+                            >
+                                {askingAI
+                                    ? "Thinking..."
+                                    : "Ask"}
+                            </button>
+                        </div>
+
+                        {/* Error */}
+                        {aiError && (
+                            <div className="mt-4 rounded-md border border-red-900 bg-red-950 p-3">
+                                <p className="text-sm text-red-400">
+                                    {aiError}
+                                </p>
+                            </div>
+                        )}
+
+                        {/* Answer */}
+                        {aiAnswer && (
+                            <div className="mt-6 rounded-md border border-gray-800 bg-gray-950 p-4">
+                                <p className="text-sm font-medium text-gray-400">
+                                    ForgeAI
+                                </p>
+
+                                <p className="mt-2 whitespace-pre-wrap text-sm text-gray-200">
+                                    {aiAnswer}
+                                </p>
+                            </div>
+                        )}
+                    </div>
+
+                    {/* AI Project Summary */}
+                    <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+
+                        <div className="flex items-center justify-between gap-4">
+                            <div>
+                                <h2 className="text-xl font-semibold">
+                                    AI Project Summary
+                                </h2>
+
+                                <p className="mt-1 text-sm text-gray-400">
+                                    Get an AI-generated overview of your project.
+                                </p>
+                            </div>
+
+                            <button
+                                onClick={handleGenerateSummary}
+                                disabled={loadingSummary}
+                                className="rounded-md bg-white px-4 py-2 text-sm text-black disabled:opacity-50"
+                            >
+                                {loadingSummary
+                                    ? "Analyzing..."
+                                    : "Generate Summary"}
+                            </button>
+                        </div>
+
+                        {summaryError && (
+                            <div className="mt-4 rounded-md border border-red-900 bg-red-950 p-3">
+                                <p className="text-sm text-red-400">
+                                    {summaryError}
+                                </p>
+                            </div>
+                        )}
+
+                        {projectSummary && (
+                            <div className="mt-6 rounded-md border border-gray-800 bg-gray-950 p-4">
+                                <p className="text-sm font-medium text-gray-400">
+                                    ForgeAI Project Analysis
+                                </p>
+
+                                <p className="mt-3 whitespace-pre-wrap text-sm leading-6 text-gray-200">
+                                    {projectSummary}
+                                </p>
+                            </div>
+                        )}
+
+                    </div>
+
+                                    {/* Comments */}
+                                    {selectedTask && (
+                        <div className="mt-6 rounded-lg border border-gray-800 bg-gray-900 p-6">
+                            <h2 className="text-xl font-semibold">
+                                Comments — {selectedTask.title}
+                            </h2>
+
+                            <div className="mt-4 flex gap-2">
+                                <input
+                                    type="text"
+                                    placeholder="Write a comment..."
+                                    value={commentContent}
+                                    onChange={(e) =>
+                                        setCommentContent(e.target.value)
+                                    }
+                                    className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 outline-none"
+                                />
+
+                                <button
+                                    onClick={handleCreateComment}
+                                    disabled={creatingComment}
+                                    className="rounded-md bg-white px-4 py-2 text-black disabled:opacity-50"
+                                >
+                                    {creatingComment
+                                        ? "Adding..."
+                                        : "Comment"}
+                                </button>
+                            </div>
+
+                            <div className="mt-6 space-y-3">
+                                {comments.map((comment) => (
+                        <div
+                            key={comment._id}
+                            className="rounded-md border border-gray-800 bg-gray-800 p-4"
+                        >
+                            {editingComment?._id === comment._id ? (
+                                <div className="space-y-3">
+                                    <input
+                                        type="text"
+                                        value={editContent}
+                                        onChange={(e) =>
+                                            setEditContent(e.target.value)
+                                        }
+                                        className="w-full rounded-md border border-gray-700 bg-gray-900 px-3 py-2 outline-none"
+                                    />
+
+                                    <div className="flex gap-2">
+                                        <button
+                                            onClick={handleUpdateComment}
+                                            disabled={updatingComment}
+                                            className="rounded-md bg-white px-3 py-2 text-sm text-black disabled:opacity-50"
+                                        >
+                                            {updatingComment
+                                                ? "Saving..."
+                                                : "Save"}
+                                        </button>
+
+                                        <button
+                                            onClick={() => {
+                                                setEditingComment(null);
+                                                setEditContent("");
+                                            }}
+                                            className="rounded-md border border-gray-700 px-3 py-2 text-sm"
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                </div>
+                            ) : (
+                                <>
+                                    <p className="font-medium">
+                                        {comment.user?.name}
+                                    </p>
+
+                                    <p className="mt-1 text-gray-300">
+                                        {comment.content}
+                                    </p>
+
+                                    <p className="mt-2 text-xs text-gray-500">
+                                        {new Date(
+                                            comment.createdAt
+                                        ).toLocaleString()}
+                                    </p>
+
+                                    <div className="mt-3 flex gap-2">
+                                        <button
+                                            onClick={() => {
+                                                setEditingComment(comment);
+                                                setEditContent(comment.content);
+                                            }}
+                                            className="text-sm text-gray-400 hover:text-white"
+                                        >
+                                            Edit
+                                        </button>
+
+                                        <button
+                                            onClick={() =>
+                                                handleDeleteComment(comment._id)
+                                            }
+                                            disabled={
+                                                deletingComment === comment._id
+                                            }
+                                            className="text-sm text-red-400 hover:text-red-300 disabled:opacity-50"
+                                        >
+                                            {deletingComment === comment._id
+                                                ? "Deleting..."
+                                                : "Delete"}
+                                        </button>
+                                    </div>
+                                </>
+                            )}
+                        </div>
+                    ))}
+                            </div>
+                        </div>
+                    )}
+
+
+
+                                {/* Chat */}
+                <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+                    <h2 className="text-xl font-semibold">
+                        Project Chat
+                    </h2>
+
+                    {/* Messages */}
+                    <div className="mt-6 h-96 space-y-4 overflow-y-auto rounded-md border border-gray-800 bg-gray-950 p-4">
+
+                        {messages.length === 0 ? (
+                            <p className="text-sm text-gray-400">
+                                No messages yet.
+                            </p>
+                        ) : (
+                            messages.map(
+                                (message: any) => (
+                                    <div
+                                        key={message._id}
+                                        className="flex items-start justify-between gap-4 rounded-md bg-gray-900 p-3"
+                                    >
+                                        <div>
+                                            <p className="text-sm font-medium">
+                                                {message.sender?.name ||
+                                                    "Unknown User"}
+                                            </p>
+
+                                            <p className="mt-1 text-sm text-gray-300">
+                                                {message.content}
+                                            </p>
+
+                                            <p className="mt-1 text-xs text-gray-500">
+                                                {new Date(
+                                                    message.createdAt
+                                                ).toLocaleString()}
+                                            </p>
+                                        </div>
+                                                <button
+                                                    onClick={() =>
+                                                        handleDeleteMessage(
+                                                            message._id
+                                                        )
+                                                    }
+                                                    className="text-sm text-red-400 hover:text-red-300"
+                                                >
+                                                    Delete
+                                                </button>
+                                        
+                                    </div>
+                                )
+                            )
+                        )}
+
+                    </div>
+
+                    {/* Send Message */}
+                    <div className="mt-4 flex gap-2">
+
+                        <input
+                            type="text"
+                            value={messageContent}
+                            onChange={(e) =>
+                                setMessageContent(
+                                    e.target.value
+                                )
+                            }
+                            onKeyDown={(e) => {
+                                if (
+                                    e.key === "Enter" &&
+                                    !e.shiftKey
+                                ) {
+                                    e.preventDefault();
+
+                                    handleSendMessage();
+                                }
+                            }}
+                            placeholder="Type a message..."
+                            className="flex-1 rounded-md border border-gray-700 bg-gray-800 px-3 py-2 outline-none"
+                        />
+
+                        <button
+                            onClick={handleSendMessage}
+                            disabled={
+                                !messageContent.trim()
+                            }
+                            className="rounded-md bg-white px-4 py-2 text-black disabled:opacity-50"
+                        >
+                            Send
+                        </button>
+
+                    </div>
+                </div>
 
             </div>
         </div>
