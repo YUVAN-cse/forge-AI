@@ -10,8 +10,11 @@ import attachmentRoutes from './routes/attachment.route.js';
 import messageRoutes from './routes/message.route.js';
 import cookieParser from 'cookie-parser';
 import aiRoutes from "./routes/ai.routes.js";
+import githubRoutes from "./routes/github.routes.js";
+import repositoryRoutes from "./routes/repository.routes.js";
 
 const app = express();
+
 
 app.use(cors({
     origin: 'http://localhost:3000',
@@ -28,6 +31,8 @@ app.use('/api/comments', commentRoutes);
 app.use('/api/attachments', attachmentRoutes);
 app.use('/api/messages', messageRoutes);
 app.use('/api/ai', aiRoutes);
+app.use("/api/github", githubRoutes);
+app.use("/api/repositories", repositoryRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Forge API');
