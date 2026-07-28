@@ -4,6 +4,8 @@ import {
     getRepositoriesService,
 } from "../services/github.service.js";
 
+import GithubAccount from "../models/githubAccount.model.js";
+
 export const connectGithub = async (req, res) => {
     try {
         const userId = req.user._id.toString();
@@ -40,18 +42,21 @@ export const connectGithub = async (req, res) => {
 export const githubCallback = async (req, res) => {
     try {
 
-        const result = await githubCallbackService(req.query);
+        await githubCallbackService(req.query);
 
-        return res.status(200).json(result);
+        return res.redirect(
+            "http://localhost:3000/github?connected=true"
+        );
 
     } catch (error) {
 
         console.log(error);
 
-        return res.status(500).json({
-            status: "error",
-            message: error.message,
-        });
+        return res.redirect(
+            `http://localhost:3000/github?connected=false&error=${encodeURIComponent(
+                error.message
+            )}`
+        );
 
     }
 };
@@ -76,6 +81,39 @@ export const getRepositories = async (req, res) => {
         return res.status(200).json({
             success: true,
             repositories,
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+
+    }
+};
+
+
+export const getGithubAccount = async (req, res) => {
+    try {
+
+        const githubAccount = await GithubAccount.findOne({
+            user: req.user._id,
+        }).select(
+            "githubId username displayName avatarUrl profileUrl connectedAt"
+        );
+
+        if (!githubAccount) {
+            return res.status(200).json({
+                success: true,
+                connected: false,
+            });
+        }
+
+        return res.status(200).json({
+            success: true,
+            connected: true,
+            account: githubAccount,
         });
 
     } catch (error) {

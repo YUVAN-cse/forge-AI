@@ -1,5 +1,6 @@
 import axios from "axios";
 import { GithubRepository } from "@/types/github";
+import api from "@/lib/axios";
 
 const GITHUB_API_URL = "http://localhost:5000/api/github";
 const REPOSITORY_API_URL = "http://localhost:5000/api/repositories";
@@ -52,6 +53,16 @@ export const importGithubRepository = async (
         {
             withCredentials: true,
         }
+    );
+
+    return response.data;
+};
+
+
+export const getGithubAccount = async () => {
+
+    const response = await api.get(
+        "/github/account"
     );
 
     return response.data;

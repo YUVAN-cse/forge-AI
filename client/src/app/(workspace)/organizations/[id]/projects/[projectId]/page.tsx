@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getProjectById } from "@/services/project.service";
 
+
 import { askProjectAI } from "@/services/ai.service";
 import GithubRepositoryList from "@/components/github/GithubRepositoryList";
 
@@ -15,6 +16,7 @@ import {
 } from "@/services/task.service";
 
 import ConnectGithubButton from "@/components/github/ConnectGithubButton";
+import { getGithubAccount } from "@/services/github.service";
 
 import socket from "@/lib/socket";
 
@@ -106,6 +108,11 @@ export default function ProjectDetailsPage() {
     const [aiError, setAiError] = useState("");
 
 
+    const [githubConnected, setGithubConnected] = useState(false);
+    const [githubUsername, setGithubUsername] = useState("");
+    const [checkingGithub, setCheckingGithub] = useState(true);
+
+
     const fetchProject = async () => {
         try {
             const response =
@@ -120,7 +127,33 @@ export default function ProjectDetailsPage() {
         }
     };
 
+    const checkGithubConnection = async () => {
+    try {
+        setCheckingGithub(true);
 
+        const response = await getGithubAccount();
+
+        if (response.connected) {
+            setGithubConnected(true);
+            setGithubUsername(
+                response.account?.username || ""
+            );
+        } else {
+            setGithubConnected(false);
+        }
+
+    } catch (error: any) {
+        console.error(
+            "Failed to check GitHub connection:",
+            error
+        );
+
+        setGithubConnected(false);
+
+    } finally {
+        setCheckingGithub(false);
+    }
+};
     
 
     const toggleGeneratedTask = (index: number) => {
@@ -471,6 +504,11 @@ const handleAskAI = async () => {
         setAskingAI(false);
     }
 };
+
+
+useEffect(() => {
+    checkGithubConnection();
+}, []);
 
     useEffect(() => {
     const fetchData = async () => {
@@ -1005,18 +1043,60 @@ const handleDeleteTask = async (
                     </div>
 
                     {/* GitHub Integration */}
-                    <div className="rounded-xl border p-6">
+                    <div className="rounded-lg border border-gray-800 bg-gray-900 p-6">
+
                         <h2 className="text-xl font-semibold">
                             GitHub Integration
                         </h2>
 
-                        <p className="mt-2 text-sm text-gray-500">
-                            Connect your GitHub account to import and analyze repositories.
-                        </p>
+                        {checkingGithub ? (
 
-                        <div className="mt-4">
-                            <ConnectGithubButton />
-                        </div>
+                            <p className="mt-2 text-sm text-gray-400">
+                                Checking GitHub connection...
+                            </p>
+
+                        ) : githubConnected ? (
+
+                            <div>
+
+                                <p className="mt-2 text-sm text-gray-400">
+                                    Your GitHub account is connected to ForgeAI.
+                                </p>
+
+                                {githubUsername && (
+                                    <p className="mt-3 text-sm text-gray-300">
+                                        Connected as{" "}
+                                        <span className="font-medium text-white">
+                                            @{githubUsername}
+                                        </span>
+                                    </p>
+                                )}
+
+                                <div className="mt-5">
+                                    <div className="inline-flex items-center rounded-md border border-gray-700 bg-gray-800 px-4 py-2 text-sm text-gray-300">
+                                        GitHub Connected ✓
+                                    </div>
+                                </div>
+
+                            </div>
+
+                        ) : (
+
+                            <div>
+
+                                <p className="mt-2 text-sm text-gray-400">
+                                    Connect your GitHub account to import and
+                                    analyze repositories.
+                                </p>
+
+                                <div className="mt-5">
+                                    <ConnectGithubButton />
+                                </div>
+
+                            </div>
+
+                        )}
+
                     </div>
 
                     {/* GitHub Repositories */}
