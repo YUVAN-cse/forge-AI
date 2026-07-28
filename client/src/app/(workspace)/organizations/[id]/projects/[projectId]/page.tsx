@@ -5,6 +5,7 @@ import { useParams } from "next/navigation";
 import { getProjectById } from "@/services/project.service";
 
 import { askProjectAI } from "@/services/ai.service";
+import GithubRepositoryList from "@/components/github/GithubRepositoryList";
 
 import {
     getTasksByProjectId,
@@ -13,7 +14,7 @@ import {
     deleteTask,
 } from "@/services/task.service";
 
-
+import ConnectGithubButton from "@/components/github/ConnectGithubButton";
 
 import socket from "@/lib/socket";
 
@@ -1000,6 +1001,40 @@ const handleDeleteTask = async (
 
         </div>
     )}
+
+                    </div>
+
+                    {/* GitHub Integration */}
+                    <div className="rounded-xl border p-6">
+                        <h2 className="text-xl font-semibold">
+                            GitHub Integration
+                        </h2>
+
+                        <p className="mt-2 text-sm text-gray-500">
+                            Connect your GitHub account to import and analyze repositories.
+                        </p>
+
+                        <div className="mt-4">
+                            <ConnectGithubButton />
+                        </div>
+                    </div>
+
+                    {/* GitHub Repositories */}
+                    <div className="mt-8 rounded-xl border p-6">
+
+                        <h2 className="text-2xl font-semibold">
+                            GitHub Repositories
+                        </h2>
+
+                        <p className="mt-2 text-sm text-gray-500">
+                            Import a GitHub repository into this project.
+                        </p>
+
+                        <div className="mt-6">
+                            <GithubRepositoryList
+                                projectId={projectId}
+                            />
+                        </div>
 
                     </div>
 

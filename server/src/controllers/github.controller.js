@@ -1,21 +1,31 @@
-import axios from "axios";
-import GithubAccount from "../models/githubAccount.model.js";
-import { githubCallbackService } from "../services/github.service.js";
-import { getRepositoriesService } from "../services/github.service.js";
+import jwt from "jsonwebtoken";
+import {
+    githubCallbackService,
+    getRepositoriesService,
+} from "../services/github.service.js";
 
 export const connectGithub = async (req, res) => {
     try {
-        // Current logged-in ForgeAI user
-        const userId = req.user._id;
+        const userId = req.user._id.toString();
 
-        // GitHub OAuth URL
+        // Create signed OAuth state token
+        const state = jwt.sign(
+            {
+                userId,
+                purpose: "github_oauth",
+            },
+            process.env.JWT_SECRET,
+            {
+                expiresIn: "10m",
+            }
+        );
+
         const githubURL =
             `https://github.com/login/oauth/authorize` +
             `?client_id=${process.env.GITHUB_CLIENT_ID}` +
             `&scope=repo,user` +
-            `&state=${userId}`;
+            `&state=${encodeURIComponent(state)}`;
 
-        // Redirect user to GitHub
         return res.redirect(githubURL);
 
     } catch (error) {
@@ -49,7 +59,19 @@ export const githubCallback = async (req, res) => {
 export const getRepositories = async (req, res) => {
     try {
 
-        const repositories = await getRepositoriesService(req.user._id);
+        const { projectId } = req.query;
+
+        if (!projectId) {
+            return res.status(400).json({
+                success: false,
+                message: "Project ID is required.",
+            });
+        }
+
+        const repositories = await getRepositoriesService(
+            req.user._id,
+            projectId
+        );
 
         return res.status(200).json({
             success: true,

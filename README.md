@@ -399,7 +399,7 @@ ForgeAI is being developed through multiple versions.
 ### 🤖 ForgeAI v0.3.0 — AI Workspace
 **Status:** ✅ Completed
  
-Planned features:
+**Completed**
 - AI Project Assistant
 - AI Project Context Engine
 - Project Q&A
@@ -428,24 +428,41 @@ Project
 ```
  
 The Project Context Engine will be the foundation of the AI features.
- 
-### 🧑‍💻 ForgeAI v0.4.0 — Developer Tools
+
+### 🧑‍💻 ForgeAI v0.4.0 — AI Code Intelligence
+
 **Status:** 🔵 Planned
- 
-This phase transforms ForgeAI from a project management application into an AI-powered developer platform.
- 
-Planned features:
-- GitHub Integration
-- Repository Connection
-- Repository Analysis
-- Codebase Understanding
-- AI Code Review
-- Architecture Generator
-- UML Generator
-- System Design Generator
+
+This phase transforms ForgeAI from an AI-powered project management platform into an intelligent developer workspace capable of understanding, analyzing, and assisting with entire software repositories.
+
+**Planned Features:**
+
+* GitHub Integration
+* Repository Connection
+* Repository Synchronization
+* Repository Explorer
+* Repository Analysis
+* Codebase Understanding
+* AI Repository Assistant
+* AI Repository Q&A
+* AI Code Explanation
+* AI Code Review
+* AI Code Suggestions
+* Architecture Generator
+* UML Generator
+* ER Diagram Generator
+* Component Diagram Generator
+* Sequence Diagram Generator
+* System Design Generator
+* Documentation Generator
+
 **Planned Developer Workflow**
+
 ```text
 GitHub Repository
+       │
+       ▼
+Repository Connection
        │
        ▼
 Repository Analyzer
@@ -453,15 +470,19 @@ Repository Analyzer
        ▼
 Codebase Understanding
        │
-       ├───────────────┐
-       ▼               ▼
-Architecture        AI Code Review
-       │
-       ├───────────────┐
-       ▼               ▼
-UML Generator     System Design
+       ├───────────────┬───────────────┐
+       ▼               ▼               ▼
+AI Repository     Architecture     Documentation
+ Assistant          Generator         Generator
+       │               │
+       ├───────────────┼───────────────┐
+       ▼               ▼               ▼
+AI Code Review   UML Generator   System Design
 ```
- 
+
+The **Codebase Understanding Engine** acts as the foundation of every AI capability, enabling ForgeAI to understand repository structure, dependencies, services, APIs, database models, and software architecture before generating intelligent, context-aware responses.
+
+
 ### 🤝 ForgeAI v0.5.0 — Advanced Collaboration
 **Status:** 🔵 Planned
  
