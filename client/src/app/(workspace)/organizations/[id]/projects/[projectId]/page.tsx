@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import { useParams } from "next/navigation";
 import { getProjectById } from "@/services/project.service";
-
+import ProjectRepositoryList from "@/components/github/ProjectRepositoryList";
 
 import { askProjectAI } from "@/services/ai.service";
 import GithubRepositoryList from "@/components/github/GithubRepositoryList";
@@ -1110,9 +1110,18 @@ const handleDeleteTask = async (
                             Import a GitHub repository into this project.
                         </p>
 
-                        <div className="mt-6">
+                        <div className="mt-6 ">
                             <GithubRepositoryList
                                 projectId={projectId}
+                            />
+
+                            <h2 className="mt-10 text-xl font-semibold">
+                                Connected Repositories
+                            </h2>
+
+                            <ProjectRepositoryList
+                                projectId={projectId}
+                                organizationId={organizationId}
                             />
                         </div>
 

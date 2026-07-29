@@ -67,3 +67,14 @@ export const getGithubAccount = async () => {
 
     return response.data;
 };
+
+export const getProjectRepositories = async (
+    projectId: string
+) => {
+
+    const response = await api.get(
+        `/repositories/project/${projectId}`
+    );
+
+    return response.data;
+};

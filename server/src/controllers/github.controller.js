@@ -2,7 +2,13 @@ import jwt from "jsonwebtoken";
 import {
     githubCallbackService,
     getRepositoriesService,
+    getRepositoryTreeService
 } from "../services/github.service.js";
+
+import Project from "../models/project.model.js";
+import Organization from "../models/organization.model.js";
+import Repository from "../models/repository.model.js";
+
 
 import GithubAccount from "../models/githubAccount.model.js";
 
@@ -117,6 +123,114 @@ export const getGithubAccount = async (req, res) => {
         });
 
     } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+
+    }
+};
+
+
+export const getRepositoryTree = async (req, res) => {
+    try {
+
+        const { repositoryId } = req.params;
+
+        // 1. Find repository
+        const repository = await Repository.findById(
+            repositoryId
+        );
+
+        if (!repository) {
+            return res.status(404).json({
+                success: false,
+                message: "Repository not found.",
+            });
+        }
+
+        // 2. Find project
+        const project = await Project.findById(
+            repository.project
+        );
+
+        if (!project) {
+            return res.status(404).json({
+                success: false,
+                message: "Project not found.",
+            });
+        }
+
+        // 3. Find organization
+        const organization = await Organization.findById(
+            project.organization
+        );
+
+        if (!organization) {
+            return res.status(404).json({
+                success: false,
+                message: "Organization not found.",
+            });
+        }
+
+        // 4. Verify user is organization member
+        const userIsMember = organization.members.some(
+            (member) =>
+                member.toString() === req.user.id.toString()
+        );
+
+        if (!userIsMember) {
+            return res.status(403).json({
+                success: false,
+                message:
+                    "You are not a member of this organization.",
+            });
+        }
+
+        // 5. Find connected GitHub account
+        const githubAccount =
+            await GithubAccount.findOne({
+                user: req.user._id,
+            });
+
+        if (!githubAccount) {
+            return res.status(400).json({
+                success: false,
+                message:
+                    "GitHub account is not connected.",
+            });
+        }
+
+        // 6. Fetch repository tree from GitHub
+        const tree =
+            await getRepositoryTreeService(
+                githubAccount.accessToken,
+                repository.owner,
+                repository.name,
+                repository.defaultBranch
+            );
+
+        // 7. Return repository tree
+        return res.status(200).json({
+            success: true,
+            repository: {
+                id: repository._id,
+                name: repository.name,
+                fullName: repository.fullName,
+                owner: repository.owner,
+                defaultBranch:
+                    repository.defaultBranch,
+            },
+            tree,
+        });
+
+    } catch (error) {
+
+        console.error(
+            "GET REPOSITORY TREE ERROR:",
+            error
+        );
 
         return res.status(500).json({
             success: false,

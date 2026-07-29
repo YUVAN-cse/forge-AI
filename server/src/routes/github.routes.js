@@ -3,10 +3,11 @@ import auth from "../middleware/auth.middleware.js";
 import {
     connectGithub,
     githubCallback,
-    getGithubAccount
+    getGithubAccount,
+    getRepositories,
+    getRepositoryTree,
 } from "../controllers/github.controller.js";
 
-import { getRepositories } from "../controllers/github.controller.js";
 
 const router = Router();
 
@@ -17,6 +18,12 @@ router.get(
     "/account",
     auth,
     getGithubAccount
+);
+
+router.get(
+    "/repositories/:repositoryId/tree",
+    auth,
+    getRepositoryTree
 );
 
 export default router;

@@ -82,4 +82,14 @@ const repositorySchema = new mongoose.Schema(
     }
 );
 
+repositorySchema.index(
+    {
+        project: 1,
+        githubRepoId: 1,
+    },
+    {
+        unique: true,
+    }
+);
+
 export default mongoose.model("Repository", repositorySchema);
