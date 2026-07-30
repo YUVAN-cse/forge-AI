@@ -1,191 +1,89 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams } from "next/navigation";
+
 import RepositoryFileTree from "@/components/repositories/RepositoryFileTree";
-import api from "@/lib/axios";
+import CodeViewer from "@/components/repositories/CodeViewer";
 
-interface RepositoryInfo {
-    _id: string;
-    name: string;
-    fullName: string;
-    owner: string;
-    defaultBranch: string;
-}
-
-interface RepositoryTreeItem {
-    path: string;
-    mode: string;
-    type: "tree" | "blob";
-    sha: string;
-    url: string;
-}
-
-interface RepositoryTreeResponse {
-    success: boolean;
-    repository: RepositoryInfo;
-    tree: RepositoryTreeItem[];
-}
+import { getRepositoryTree } from "@/services/github.service";
+import { getRepositoryFile } from "@/services/repository.service";
 
 export default function RepositoryExplorerPage() {
 
     const params = useParams();
-    const router = useRouter();
 
-    const organizationId = params.id as string;
-    const projectId = params.projectId as string;
-    const repositoryId = params.repositoryId as string;
+    const repositoryId =
+        params.repositoryId as string;
 
-    const [repository, setRepository] =
-        useState<RepositoryInfo | null>(null);
+    const [tree, setTree] = useState([]);
 
-    const [tree, setTree] =
-        useState<RepositoryTreeItem[]>([]);
-
-    const [loading, setLoading] =
-        useState(true);
-
-    const [error, setError] =
-        useState<string | null>(null);
-
+    const [selectedFile, setSelectedFile] =
+        useState<any>(null);
 
     useEffect(() => {
 
-        const fetchRepositoryTree = async () => {
+        const loadTree = async () => {
 
-            try {
-
-                setLoading(true);
-                setError(null);
-
-                const response =
-                    await api.get<RepositoryTreeResponse>(
-                        `/repositories/${repositoryId}/tree`
-                    );
-
-                setRepository(
-                    response.data.repository
+            const response =
+                await getRepositoryTree(
+                    repositoryId
                 );
 
-                setTree(
-                    response.data.tree || []
-                );
-
-            } catch (error) {
-
-                console.error(
-                    "Failed to load repository tree:",
-                    error
-                );
-
-                setError(
-                    "Failed to load repository."
-                );
-
-            } finally {
-
-                setLoading(false);
-
-            }
+            setTree(response.tree);
 
         };
 
-        if (repositoryId) {
-            fetchRepositoryTree();
-        }
+        loadTree();
 
     }, [repositoryId]);
 
+    const handleFileClick = async (
+        path: string
+    ) => {
 
-    if (loading) {
+        const file =
+            await getRepositoryFile(
+                repositoryId,
+                path
+            );
 
-        return (
-            <div className="p-6">
+        setSelectedFile(file);
 
-                <p className="text-gray-500">
-                    Loading repository...
-                </p>
-
-            </div>
-        );
-
-    }
-
-
-    if (error) {
-
-        return (
-            <div className="p-6">
-
-                <button
-                    onClick={() => router.back()}
-                    className="mb-6 text-sm text-gray-500 hover:text-white"
-                >
-                    ← Back
-                </button>
-
-                <div className="rounded-lg border border-red-900 bg-red-950/30 p-6 text-red-400">
-                    {error}
-                </div>
-
-            </div>
-        );
-
-    }
-
+    };
 
     return (
 
-        <div className="p-6">
+        <div className="grid grid-cols-4 gap-6 p-6 h-[calc(100vh-120px)]">
 
-            {/* Back Button */}
-
-            <button
-                onClick={() => router.back()}
-                className="mb-6 text-sm text-gray-500 hover:text-white"
-            >
-                ← Back to Repositories
-            </button>
-
-
-            {/* Repository Header */}
-
-            <div className="mb-8">
-
-                <h1 className="text-2xl font-bold">
-                    {repository?.name}
-                </h1>
-
-                <p className="mt-1 text-sm text-gray-500">
-                    {repository?.fullName}
-                </p>
-
-                <p className="mt-2 text-sm text-gray-500">
-                    Branch:{" "}
-                    <span className="text-gray-300">
-                        {repository?.defaultBranch}
-                    </span>
-                </p>
-
-            </div>
-
-
-            {/* Repository Tree */}
-
-            <div className="rounded-lg border border-gray-800 bg-gray-900">
-
-                <div className="border-b border-gray-800 px-5 py-4">
-
-                    <h2 className="font-semibold">
-                        Repository Files
-                    </h2>
-
-                </div>
-
+            <div className="col-span-1 overflow-auto rounded-lg border border-gray-800">
 
                 <RepositoryFileTree
                     tree={tree}
+                    onFileClick={handleFileClick}
                 />
+
+            </div>
+
+            <div className="col-span-3 overflow-hidden">
+
+                {selectedFile ? (
+
+                    <CodeViewer
+                        fileName={selectedFile.name}
+                        filePath={selectedFile.path}
+                        content={selectedFile.content}
+                    />
+
+                ) : (
+
+                    <div className="flex h-full items-center justify-center rounded-lg border border-gray-800 text-gray-500">
+
+                        Select a file to view.
+
+                    </div>
+
+                )}
 
             </div>
 

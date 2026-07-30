@@ -4,6 +4,11 @@ import {
     getRepositoryTreeForProjectService,
 } from "../services/repository.service.js";
 
+
+import {
+    getRepositoryFileService,
+} from "../services/repositoryFile.service.js";
+
 export const importRepository = async (req, res) => {
     try {
 
@@ -97,4 +102,46 @@ export const getRepositoryTree = async (
         });
 
     }
+};
+
+
+export const getRepositoryFile = async (
+    req,
+    res
+) => {
+
+    try {
+
+        const { repositoryId } = req.params;
+
+        const { path } = req.query;
+
+        if (!path) {
+            return res.status(400).json({
+                success: false,
+                message: "File path is required.",
+            });
+        }
+
+        const file =
+            await getRepositoryFileService(
+                repositoryId,
+                req.user._id,
+                path
+            );
+
+        return res.status(200).json({
+            success: true,
+            file,
+        });
+
+    } catch (error) {
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+
+    }
+
 };

@@ -19,6 +19,7 @@ interface TreeNode {
 
 interface RepositoryFileTreeProps {
     tree: RepositoryTreeItem[];
+    onFileClick: (path: string) => void;
 }
 
 const buildTree = (
@@ -77,11 +78,13 @@ const buildTree = (
 interface TreeNodeItemProps {
     node: TreeNode;
     level: number;
+    onFileClick: (path: string) => void;
 }
 
 function TreeNodeItem({
     node,
     level,
+    onFileClick,
 }: TreeNodeItemProps) {
 
     const [expanded, setExpanded] =
@@ -93,9 +96,13 @@ function TreeNodeItem({
     const handleClick = () => {
 
         if (isFolder) {
-            setExpanded(
-                !expanded
-            );
+
+            setExpanded(!expanded);
+
+        } else {
+
+            onFileClick(node.path);
+
         }
 
     };
@@ -109,8 +116,7 @@ function TreeNodeItem({
                 onClick={handleClick}
                 className="flex cursor-pointer items-center gap-2 rounded-md px-3 py-2 text-sm transition hover:bg-gray-800"
                 style={{
-                    paddingLeft:
-                        `${level * 20 + 12}px`,
+                    paddingLeft: `${level * 20 + 12}px`,
                 }}
             >
 
@@ -119,9 +125,7 @@ function TreeNodeItem({
                 {isFolder ? (
 
                     <span className="w-4 text-xs text-gray-500">
-                        {expanded
-                            ? "▼"
-                            : "▶"}
+                        {expanded ? "▼" : "▶"}
                     </span>
 
                 ) : (
@@ -130,17 +134,13 @@ function TreeNodeItem({
 
                 )}
 
-
                 {/* File / Folder Icon */}
 
                 <span>
                     {isFolder
-                        ? expanded
-                            ? "📂"
-                            : "📁"
+                        ? (expanded ? "📂" : "📁")
                         : "📄"}
                 </span>
-
 
                 {/* Name */}
 
@@ -149,7 +149,6 @@ function TreeNodeItem({
                 </span>
 
             </div>
-
 
             {/* Children */}
 
@@ -163,15 +162,10 @@ function TreeNodeItem({
                             (child) => (
 
                                 <TreeNodeItem
-                                    key={
-                                        child.path
-                                    }
-                                    node={
-                                        child
-                                    }
-                                    level={
-                                        level + 1
-                                    }
+                                    key={child.path}
+                                    node={child}
+                                    level={level + 1}
+                                    onFileClick={onFileClick}
                                 />
 
                             )
@@ -184,10 +178,9 @@ function TreeNodeItem({
         </div>
     );
 }
-
-
 export default function RepositoryFileTree({
     tree,
+    onFileClick,
 }: RepositoryFileTreeProps) {
 
     const treeStructure =
@@ -212,6 +205,7 @@ export default function RepositoryFileTree({
                             key={node.path}
                             node={node}
                             level={0}
+                            onFileClick={onFileClick}
                         />
 
                     )

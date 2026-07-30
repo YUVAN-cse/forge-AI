@@ -78,3 +78,14 @@ export const getProjectRepositories = async (
 
     return response.data;
 };
+
+export const getRepositoryTree = async (
+    repositoryId: string
+) => {
+
+    const response = await api.get(
+        `/github/repositories/${repositoryId}/tree`
+    );
+
+    return response.data;
+};
