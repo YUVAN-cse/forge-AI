@@ -12,6 +12,8 @@ import cookieParser from 'cookie-parser';
 import aiRoutes from "./routes/ai.routes.js";
 import githubRoutes from "./routes/github.routes.js";
 import repositoryRoutes from "./routes/repository.routes.js";
+import repositoryAnalysisRoutes from "./routes/repositoryAnalysis.routes.js";
+
 
 const app = express();
 
@@ -33,6 +35,7 @@ app.use('/api/messages', messageRoutes);
 app.use('/api/ai', aiRoutes);
 app.use("/api/github", githubRoutes);
 app.use("/api/repositories", repositoryRoutes);
+app.use("/api", repositoryAnalysisRoutes);
 
 app.get('/', (req, res) => {
     res.send('Welcome to the Forge API');

@@ -89,3 +89,15 @@ export const getRepositoryTree = async (
 
     return response.data;
 };
+
+
+export const analyzeRepository = async (
+    repositoryId: string
+) => {
+
+    const response = await api.post(
+        `/repositories/${repositoryId}/analyze`
+    );
+
+    return response.data;
+};

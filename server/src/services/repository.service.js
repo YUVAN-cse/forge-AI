@@ -110,3 +110,21 @@ export const getRepositoryTreeForProjectService = async (
         tree,
     };
 };
+
+export const getRepositoryByIdService = async (
+    repositoryId
+) => {
+
+    const repository =
+        await Repository.findById(
+            repositoryId
+        );
+
+    if (!repository) {
+        throw new Error(
+            "Repository not found."
+        );
+    }
+
+    return repository;
+};

@@ -76,6 +76,21 @@ const repositorySchema = new mongoose.Schema(
             type: Date,
             default: Date.now,
         },
+        analysisStatus: {
+            type: String,
+            enum: [
+                "NOT_ANALYZED",
+                "ANALYZING",
+                "ANALYZED",
+                "FAILED",
+            ],
+            default: "NOT_ANALYZED",
+        },
+
+        analyzedAt: {
+            type: Date,
+            default: null,
+        },
     },
     {
         timestamps: true,
