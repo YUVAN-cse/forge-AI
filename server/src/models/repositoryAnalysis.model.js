@@ -55,7 +55,17 @@ const repositoryAnalysisSchema = new mongoose.Schema(
         totalDirectories: {
             type: Number,
             default: 0,
-        }
+        },
+
+        entryPoint: { type: String, }, 
+        architecture: { type: String, }, 
+        controllers: { type: Number, default: 0, }, 
+        services: { type: Number, default: 0, }, 
+        routes: { type: Number, default: 0, }, 
+        models: { type: Number, default: 0, }, 
+        middleware: { type: Number, default: 0, }, 
+        hasDatabase: { type: Boolean, default: false, },
+        databaseType: { type: String, },
     },
     {
         timestamps: true,
