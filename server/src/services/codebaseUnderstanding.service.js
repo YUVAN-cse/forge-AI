@@ -1,11 +1,22 @@
 import {
+    buildCodeStructure,
+} from "./codeStructure.service.js";
+
+import {
+    getCodeFilesForAnalysis,
+} from "./codeFileContent.service.js";
+
+import {
+    buildCodeRelationships,
+} from "./codeRelationship.service.js";
+
+import {
     getRepositoryFileService,
 } from "./repositoryFile.service.js";
 
 import {
     parseDependencyFile,
 } from "./dependencyParser.service.js";
-import { analyzeDependencies } from "./codebaseUnderstanding.service.js";
 
 export const analyzeDependencies = async (
     repositoryId,
@@ -90,6 +101,9 @@ export const buildCodebaseUnderstanding = async (
         (item) => item.path.toLowerCase()
     );
 
+    const codeStructure =
+    buildCodeStructure(tree);
+
 
     // ==========================================
     // INITIAL STRUCTURE
@@ -109,6 +123,21 @@ export const buildCodebaseUnderstanding = async (
 
     };
 
+    understanding.codeStructure =
+    codeStructure;
+
+    const files =
+    await getCodeFilesForAnalysis(
+        repositoryId,
+        userId,
+        tree
+    );
+
+    const relationships =
+        buildCodeRelationships(files);
+
+    understanding.relationships =
+        relationships;
 
     // ==========================================
     // IMPORTANT FOLDERS
