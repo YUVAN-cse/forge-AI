@@ -104,6 +104,10 @@ export const buildCodebaseUnderstanding = async (
     const codeStructure =
     buildCodeStructure(tree);
 
+    console.log(
+    "CODE STRUCTURE:",
+    JSON.stringify(codeStructure, null, 2)
+);
 
     // ==========================================
     // INITIAL STRUCTURE
@@ -134,7 +138,15 @@ export const buildCodebaseUnderstanding = async (
     );
 
     const relationships =
-        buildCodeRelationships(files);
+    buildCodeRelationships(
+        files,
+        codeStructure
+    );
+
+    console.log(
+    "RELATIONSHIPS:",
+    JSON.stringify(relationships, null, 2)
+);
 
     understanding.relationships =
         relationships;
