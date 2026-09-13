@@ -204,6 +204,30 @@ const extractFunctionCalls = (content) => {
 // BUILD SEMANTIC RELATIONSHIPS
 // ==========================================
 
+// EXTRACT MODEL CALLS
+const extractModelCalls = (content, importedNames) => {
+    const calls = [];
+
+    importedNames.forEach((name) => {
+        const modelCallRegex =
+            new RegExp(
+                `\\b${name}\\.(find|findOne|findById|findByIdAndUpdate|findByIdAndDelete|create|updateOne|updateMany|deleteOne|deleteMany|findOneAndUpdate|findOneAndDelete|countDocuments|exists)\\s*\\(`,
+                "g"
+            );
+
+        let match;
+
+        while ((match = modelCallRegex.exec(content)) !== null) {
+            calls.push({
+                symbol: name,
+                method: match[1],
+            });
+        }
+    });
+
+    return calls;
+};
+
 const buildSemanticRelationships = (
     files,
     basicRelationships
@@ -225,58 +249,79 @@ const buildSemanticRelationships = (
             extractImports(file.content);
 
         const calls =
-            extractFunctionCalls(file.content);
+    extractFunctionCalls(file.content);
+
+const modelCalls =
+    extractModelCalls(
+        file.content,
+        importInfo.names
+    );
 
 
         imports.forEach((importInfo) => {
+    const target =
+        basicRelationships.find(
+            (relationship) =>
+                relationship.from === file.path &&
+                relationship.to ===
+                    resolveImportPath(
+                        file.path,
+                        importInfo.path,
+                        new Set(fileMap.keys())
+                    )
+        );
 
-            const target =
-                basicRelationships.find(
-                    (relationship) =>
-                        relationship.from === file.path &&
-                        relationship.to ===
-                            resolveImportPath(
-                                file.path,
-                                importInfo.path,
-                                new Set(fileMap.keys())
-                            )
-                );
+    if (!target) {
+        return;
+    }
 
+    const targetFile = target.to;
 
-            if (!target) {
-                return;
-            }
+    const fromRole =
+        getFileRole(file.path);
 
+    const toRole =
+        getFileRole(targetFile);
 
-            const targetFile = target.to;
+    const modelCalls =
+        extractModelCalls(
+            file.content,
+            importInfo.names
+        );
 
+    modelCalls.forEach((call) => {
+        if (toRole !== "models") {
+            return;
+        }
 
-            // ==================================
-            // Named / default imported functions
-            // ==================================
-
-            importInfo.names.forEach((name) => {
-
-                if (!calls.includes(name)) {
-                    return;
-                }
-
-
-                relationships.push({
-
-                    from: file.path,
-
-                    to: targetFile,
-
-                    type: "calls",
-
-                    symbol: name,
-
-                });
-
-            });
-
+        relationships.push({
+            from: file.path,
+            to: targetFile,
+            type: "service_uses_model",
+            symbol: call.symbol,
+            method: call.method,
         });
+    });
+
+    importInfo.names.forEach((name) => {
+        if (!calls.includes(name)) {
+            return;
+        }
+
+        const relationshipType =
+            classifyRelationship(
+                fromRole,
+                toRole
+            );
+
+        relationships.push({
+            from: file.path,
+            to: targetFile,
+            type: relationshipType,
+            symbol: name,
+        });
+    });
+});
 
     });
 
@@ -367,9 +412,60 @@ export const buildCodeRelationships = (
 };
 
 // ==========================================
-// CLASSIFY SEMANTIC RELATIONSHIP
+// GET FILE ROLE
 // ==========================================
 
+const getFileRole = (filePath) => {
+
+    const path = filePath.toLowerCase();
+
+    if (
+        path.includes("/routes/") ||
+        path.includes("/route/") ||
+        path.includes("routes.")
+    ) {
+        return "routes";
+    }
+
+    if (
+        path.includes("/controllers/") ||
+        path.includes("/controller/") ||
+        path.includes("controllers.")
+    ) {
+        return "controllers";
+    }
+
+    if (
+        path.includes("/services/") ||
+        path.includes("/service/") ||
+        path.includes("services.")
+    ) {
+        return "services";
+    }
+
+    if (
+    path.includes("/models/") ||
+    path.includes("/model/") ||
+    path.includes("models.") ||
+    path.includes(".model.")
+) {
+    return "models";
+}
+
+    if (
+        path.includes("/middleware/") ||
+        path.includes("/middlewares/") ||
+        path.includes("middleware.")
+    ) {
+        return "middleware";
+    }
+
+    return "unknown";
+};
+
+// ==========================================
+// CLASSIFY SEMANTIC RELATIONSHIP
+// ==========================================
 const classifyRelationship = (
     fromRole,
     toRole
@@ -412,3 +508,4 @@ const classifyRelationship = (
 
     return "calls";
 };
+
