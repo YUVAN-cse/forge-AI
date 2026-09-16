@@ -3,8 +3,14 @@ import {
 } from "./codeStructure.service.js";
 
 import {
+    buildArchitectureInsights
+} from "./architectureInsights.service.js";
+
+import {
     getCodeFilesForAnalysis,
 } from "./codeFileContent.service.js";
+
+import { buildArchitectureGraph } from "./architectureGraph.service.js";
 
 import {
     buildCodeRelationships,
@@ -114,18 +120,16 @@ export const buildCodebaseUnderstanding = async (
     // ==========================================
 
     const understanding = {
-
-        entryPoints: [],
-
-        folders: {},
-
-        importantFiles: [],
-
-        configurations: [],
-
-        dependencies: [],
-
-    };
+    entryPoints: [],
+    folders: {},
+    importantFiles: [],
+    configurations: [],
+    dependencies: [],
+    codeStructure: {},
+    relationships: [],
+    architectureGraph: {},
+    architectureInsights: {},
+};
 
     understanding.codeStructure =
     codeStructure;
@@ -142,6 +146,23 @@ export const buildCodebaseUnderstanding = async (
         files,
         codeStructure
     );
+
+    const architectureGraph =
+    buildArchitectureGraph(
+        files,
+        relationships
+    );
+
+    const architectureInsights =
+    buildArchitectureInsights(
+        architectureGraph
+    );
+    
+    understanding.architectureGraph =
+    architectureGraph;
+
+understanding.architectureInsights =
+    architectureInsights;
 
     console.log(
     "RELATIONSHIPS:",
