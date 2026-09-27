@@ -24,6 +24,10 @@ import {
     parseDependencyFile,
 } from "./dependencyParser.service.js";
 
+import {
+    buildArchitecture
+} from "./architecture.service.js";
+
 export const analyzeDependencies = async (
     repositoryId,
     userId,
@@ -129,6 +133,7 @@ export const buildCodebaseUnderstanding = async (
     relationships: [],
     architectureGraph: {},
     architectureInsights: {},
+    architecture: {},
 };
 
     understanding.codeStructure =
@@ -155,7 +160,9 @@ export const buildCodebaseUnderstanding = async (
 
     const architectureInsights =
     buildArchitectureInsights(
-        architectureGraph
+        architectureGraph,
+        files,
+        understanding.entryPoints
     );
     
     understanding.architectureGraph =
@@ -171,6 +178,16 @@ understanding.architectureInsights =
 
     understanding.relationships =
         relationships;
+
+
+    const architecture =
+    buildArchitecture(
+        architectureGraph,
+        architectureInsights
+    );
+
+    understanding.architecture =
+    architecture;
 
     // ==========================================
     // IMPORTANT FOLDERS

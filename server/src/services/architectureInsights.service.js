@@ -1,3 +1,19 @@
+import {
+    detectArchitecturePattern
+} from "./architecturePattern.service.js";
+
+import {
+    detectOrphanFiles
+} from "./orphanDetection.service.js";
+
+import {
+    detectCircularDependencies
+} from "./circularDependency.service.js";
+
+import {
+    detectArchitectureViolations
+} from "./architectureViolation.service.js";
+
 // DETECT ARCHITECTURE LAYERS
 export const detectLayers = (nodes) => {
     const layers = {
@@ -64,7 +80,9 @@ export const detectLayerFlow = (layers) => {
 
 // BUILD ARCHITECTURE INSIGHTS
 export const buildArchitectureInsights = (
-    architectureGraph
+    architectureGraph,
+    files,
+    entryPoints = []
 ) => {
     const layers =
         detectLayers(
@@ -74,8 +92,37 @@ export const buildArchitectureInsights = (
     const layerFlow =
         detectLayerFlow(layers);
 
+    const architecturePattern =
+        detectArchitecturePattern(
+            layers,
+            architectureGraph.edges
+        );
+
+    const orphanFiles =
+    detectOrphanFiles(
+        files,
+        architectureGraph.edges,
+        entryPoints
+    );
+
+    const circularDependencies =
+    detectCircularDependencies(
+        architectureGraph.nodes,
+        architectureGraph.edges
+    );
+
+    const architectureViolations =
+    detectArchitectureViolations(
+        architectureGraph.edges,
+        architecturePattern
+    );
+
     return {
-        layers,
-        layerFlow,
-    };
+    layers,
+    layerFlow,
+    architecturePattern,
+    orphanFiles,
+    circularDependencies,
+    architectureViolations,
+};
 };
