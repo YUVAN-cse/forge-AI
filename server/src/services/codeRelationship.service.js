@@ -205,15 +205,37 @@ const extractFunctionCalls = (content) => {
 // ==========================================
 
 // EXTRACT MODEL CALLS
+
 const extractModelCalls = (content, importedNames) => {
     const calls = [];
 
+    const methods = [
+        "find",
+        "findOne",
+        "findById",
+        "findByIdAndUpdate",
+        "findByIdAndDelete",
+        "create",
+        "updateOne",
+        "updateMany",
+        "deleteOne",
+        "deleteMany",
+        "findOneAndUpdate",
+        "findOneAndDelete",
+        "countDocuments",
+        "exists",
+    ];
+
     importedNames.forEach((name) => {
-        const modelCallRegex =
-            new RegExp(
-                `\\b${name}\\.(find|findOne|findById|findByIdAndUpdate|findByIdAndDelete|create|updateOne|updateMany|deleteOne|deleteMany|findOneAndUpdate|findOneAndDelete|countDocuments|exists)\\s*\\(`,
-                "g"
-            );
+        const escapedName = name.replace(
+            /[.*+?^${}()|[\]\\]/g,
+            "\\$&"
+        );
+
+        const modelCallRegex = new RegExp(
+            `\\b${escapedName}\\.(${methods.join("|")})\\s*\\(`,
+            "g"
+        );
 
         let match;
 
@@ -228,106 +250,89 @@ const extractModelCalls = (content, importedNames) => {
     return calls;
 };
 
+
+
 const buildSemanticRelationships = (
     files,
     basicRelationships
 ) => {
-
     const relationships = [];
 
-    const fileMap = new Map(
-        files.map((file) => [
-            file.path,
-            file.content
-        ])
+    const repositoryFiles = new Set(
+        files.map((file) => file.path)
     );
 
+    const basicRelationshipKeys = new Set(
+        basicRelationships.map(
+            (relationship) =>
+                `${relationship.from}|${relationship.to}`
+        )
+    );
 
     files.forEach((file) => {
-
-        const imports =
-            extractImports(file.content);
-
-        const calls =
-    extractFunctionCalls(file.content);
-
-const modelCalls =
-    extractModelCalls(
-        file.content,
-        importInfo.names
-    );
-
+        const imports = extractImports(file.content);
+        const calls = extractFunctionCalls(file.content);
 
         imports.forEach((importInfo) => {
-    const target =
-        basicRelationships.find(
-            (relationship) =>
-                relationship.from === file.path &&
-                relationship.to ===
-                    resolveImportPath(
-                        file.path,
-                        importInfo.path,
-                        new Set(fileMap.keys())
-                    )
-        );
-
-    if (!target) {
-        return;
-    }
-
-    const targetFile = target.to;
-
-    const fromRole =
-        getFileRole(file.path);
-
-    const toRole =
-        getFileRole(targetFile);
-
-    const modelCalls =
-        extractModelCalls(
-            file.content,
-            importInfo.names
-        );
-
-    modelCalls.forEach((call) => {
-        if (toRole !== "models") {
-            return;
-        }
-
-        relationships.push({
-            from: file.path,
-            to: targetFile,
-            type: "service_uses_model",
-            symbol: call.symbol,
-            method: call.method,
-        });
-    });
-
-    importInfo.names.forEach((name) => {
-        if (!calls.includes(name)) {
-            return;
-        }
-
-        const relationshipType =
-            classifyRelationship(
-                fromRole,
-                toRole
+            const targetFile = resolveImportPath(
+                file.path,
+                importInfo.path,
+                repositoryFiles
             );
 
-        relationships.push({
-            from: file.path,
-            to: targetFile,
-            type: relationshipType,
-            symbol: name,
+            if (
+                !targetFile ||
+                !basicRelationshipKeys.has(
+                    `${file.path}|${targetFile}`
+                )
+            ) {
+                return;
+            }
+
+            const fromRole = getFileRole(file.path);
+            const toRole = getFileRole(targetFile);
+
+            if (toRole === "models") {
+                const modelCalls = extractModelCalls(
+                    file.content,
+                    importInfo.names
+                );
+
+                modelCalls.forEach((call) => {
+                    relationships.push({
+                        from: file.path,
+                        to: targetFile,
+                        type: "service_uses_model",
+                        symbol: call.symbol,
+                        method: call.method,
+                    });
+                });
+            }
+
+            importInfo.names.forEach((name) => {
+                if (!calls.includes(name)) {
+                    return;
+                }
+
+                const relationshipType =
+                    classifyRelationship(
+                        fromRole,
+                        toRole
+                    );
+
+                relationships.push({
+                    from: file.path,
+                    to: targetFile,
+                    type: relationshipType,
+                    symbol: name,
+                });
+            });
         });
     });
-});
-
-    });
-
 
     return relationships;
 };
+
 
 // ==========================================
 // BUILD RELATIONSHIPS

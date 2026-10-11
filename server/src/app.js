@@ -13,6 +13,7 @@ import aiRoutes from "./routes/ai.routes.js";
 import githubRoutes from "./routes/github.routes.js";
 import repositoryRoutes from "./routes/repository.routes.js";
 import repositoryAnalysisRoutes from "./routes/repositoryAnalysis.routes.js";
+import repositoryIntelligenceRoutes from "./routes/repositoryIntelligence.routes.js";
 
 
 const app = express();
@@ -28,6 +29,7 @@ app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/projects', projectRoutes);
+app.use("/api", repositoryIntelligenceRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/attachments', attachmentRoutes);
