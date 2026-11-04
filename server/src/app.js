@@ -14,7 +14,8 @@ import githubRoutes from "./routes/github.routes.js";
 import repositoryRoutes from "./routes/repository.routes.js";
 import repositoryAnalysisRoutes from "./routes/repositoryAnalysis.routes.js";
 import repositoryIntelligenceRoutes from "./routes/repositoryIntelligence.routes.js";
-
+import repositoryAssistantRoutes from "./routes/repositoryAssistant.routes.js";
+import repositoryCodeReviewRoutes from "./routes/repositoryCodeReview.routes.js";
 
 const app = express();
 
@@ -27,6 +28,7 @@ app.use(express.json());
 app.use(cookieParser());
 app.use(bodyParser.urlencoded({ extended: true }));
 app.use('/api/auth', authRoutes);
+app.use("/api", repositoryCodeReviewRoutes);
 app.use('/api/organizations', organizationRoutes);
 app.use('/api/projects', projectRoutes);
 app.use("/api", repositoryIntelligenceRoutes);
@@ -34,6 +36,7 @@ app.use('/api/tasks', taskRoutes);
 app.use('/api/comments', commentRoutes);
 app.use('/api/attachments', attachmentRoutes);
 app.use('/api/messages', messageRoutes);
+app.use("/api", repositoryAssistantRoutes);
 app.use('/api/ai', aiRoutes);
 app.use("/api/github", githubRoutes);
 app.use("/api/repositories", repositoryRoutes);

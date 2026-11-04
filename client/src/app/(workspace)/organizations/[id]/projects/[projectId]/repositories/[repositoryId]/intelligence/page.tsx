@@ -7,6 +7,7 @@ import { CodebaseUnderstanding } from "@/types/intelligence";
 import IntelligenceOverviewCards from "@/components/intelligence/IntelligenceOverviewCards";
 import ArchitectureGraph from "@/components/intelligence/ArchitectureGraph";
 import ArchitectureInsightsPanel from "@/components/intelligence/ArchitectureInsightsPanel";
+import RepositoryAssistant from "@/components/intelligence/RepositoryAssistant";
 
 export default function RepositoryIntelligencePage() {
     const { repositoryId } = useParams<{
@@ -95,6 +96,7 @@ export default function RepositoryIntelligencePage() {
         <ArchitectureInsightsPanel
             insights={intelligence.architecture.insights}
         />
+        <RepositoryAssistant repositoryId={repositoryId} />
     </div>
 );
 }
