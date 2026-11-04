@@ -1,3 +1,4 @@
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -6,6 +7,7 @@ import { useParams } from "next/navigation";
 import RepositoryFileTree from "@/components/repositories/RepositoryFileTree";
 import CodeViewer from "@/components/repositories/CodeViewer";
 import RepositoryAnalysis from "@/components/repositories/RepositoryAnalysis";
+import RepositoryCodeReview from "@/components/intelligence/RepositoryCodeReview";
 
 import { getRepositoryTree } from "@/services/github.service";
 import { getRepositoryFile } from "@/services/repository.service";
@@ -146,25 +148,18 @@ export default function RepositoryExplorerPage() {
 
         <div className="space-y-6 p-6">
 
-            {/* ==================================
-                REPOSITORY ANALYSIS
-            ================================== */}
+            {/* REPOSITORY ANALYSIS */}
 
             <RepositoryAnalysis
                 repositoryId={repositoryId}
             />
 
 
-            {/* ==================================
-                REPOSITORY EXPLORER
-            ================================== */}
+            {/* REPOSITORY EXPLORER */}
 
             <div className="grid h-[calc(100vh-400px)] grid-cols-4 gap-6">
 
-
-                {/* ==================================
-                    FILE TREE
-                ================================== */}
+                {/* FILE TREE */}
 
                 <div className="col-span-1 overflow-auto rounded-lg border border-gray-800">
 
@@ -186,48 +181,34 @@ export default function RepositoryExplorerPage() {
                 </div>
 
 
-                {/* ==================================
-                    CODE VIEWER
-                ================================== */}
+                {/* CODE VIEWER */}
 
                 <div className="col-span-3 overflow-hidden">
 
                     {error ? (
 
                         <div className="flex h-full items-center justify-center rounded-lg border border-gray-800 text-red-500">
-
                             {error}
-
                         </div>
 
                     ) : loadingFile ? (
 
                         <div className="flex h-full items-center justify-center rounded-lg border border-gray-800 text-gray-500">
-
                             Loading file...
-
                         </div>
 
                     ) : selectedFile ? (
 
                         <CodeViewer
-                            fileName={
-                                selectedFile.name
-                            }
-                            filePath={
-                                selectedFile.path
-                            }
-                            content={
-                                selectedFile.content
-                            }
+                            fileName={selectedFile.name}
+                            filePath={selectedFile.path}
+                            content={selectedFile.content}
                         />
 
                     ) : (
 
                         <div className="flex h-full items-center justify-center rounded-lg border border-gray-800 text-gray-500">
-
                             Select a file to view.
-
                         </div>
 
                     )}
@@ -235,6 +216,18 @@ export default function RepositoryExplorerPage() {
                 </div>
 
             </div>
+
+
+            {/* AI CODE REVIEW */}
+
+            {selectedFile && (
+
+                <RepositoryCodeReview
+                    repositoryId={repositoryId}
+                    filePath={selectedFile.path}
+                />
+
+            )}
 
         </div>
 
