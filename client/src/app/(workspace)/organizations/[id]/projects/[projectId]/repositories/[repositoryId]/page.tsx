@@ -48,6 +48,9 @@ export default function RepositoryExplorerPage() {
     const [error, setError] =
         useState<string | null>(null);
 
+    const [selectedLine, setSelectedLine] =
+        useState<number | null>(null);
+
 
     // ==========================================
     // LOAD REPOSITORY TREE
@@ -101,43 +104,31 @@ export default function RepositoryExplorerPage() {
     // LOAD FILE
     // ==========================================
 
-    const handleFileClick = async (
-        path: string
-    ) => {
+    const handleFileClick = async (path: string) => {
+    try {
+        setLoadingFile(true);
+        setError(null);
+        setSelectedLine(null);
 
-        try {
+        const response = await getRepositoryFile(
+            repositoryId,
+            path
+        );
 
-            setLoadingFile(true);
-            setError(null);
+        setSelectedFile(response.file || response);
 
-            const response =
-                await getRepositoryFile(
-                    repositoryId,
-                    path
-                );
+    } catch (error) {
+        console.error(
+            "Failed to load repository file:",
+            error
+        );
 
-            setSelectedFile(
-                response.file || response
-            );
+        setError("Failed to load file.");
 
-        } catch (error) {
-
-            console.error(
-                "Failed to load repository file:",
-                error
-            );
-
-            setError(
-                "Failed to load file."
-            );
-
-        } finally {
-
-            setLoadingFile(false);
-
-        }
-
-    };
+    } finally {
+        setLoadingFile(false);
+    }
+};
 
 
     // ==========================================
@@ -203,6 +194,7 @@ export default function RepositoryExplorerPage() {
                             fileName={selectedFile.name}
                             filePath={selectedFile.path}
                             content={selectedFile.content}
+                            selectedLine={selectedLine}
                         />
 
                     ) : (
@@ -225,6 +217,7 @@ export default function RepositoryExplorerPage() {
                 <RepositoryCodeReview
                     repositoryId={repositoryId}
                     filePath={selectedFile.path}
+                    onSelectLine={setSelectedLine}
                 />
 
             )}

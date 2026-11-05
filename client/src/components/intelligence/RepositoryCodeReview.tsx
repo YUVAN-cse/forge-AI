@@ -25,11 +25,13 @@ interface ReviewResult {
 interface Props {
   repositoryId: string;
   filePath: string;
+  onSelectLine: (line: number) => void;
 }
 
 export default function RepositoryCodeReview({
   repositoryId,
   filePath,
+  onSelectLine,
 }: Props) {
   const [result, setResult] = useState<ReviewResult | null>(null);
   const [loading, setLoading] = useState(false);
@@ -163,70 +165,82 @@ export default function RepositoryCodeReview({
 
           <div className="space-y-3">
             {filteredFindings.map((finding, index) => (
-              <div
-                key={index}
-                className="overflow-hidden rounded-lg border border-white/10"
-              >
-                <button
-                  onClick={() =>
-                    setExpanded(expanded === index ? null : index)
-                  }
-                  className="flex w-full items-center justify-between gap-3 p-4 text-left"
-                >
-                  <div className="min-w-0 space-y-2">
-                    <div className="flex flex-wrap items-center gap-2">
-                      <span
-                        className={`rounded-md border px-2 py-1 text-xs font-medium ${
-                          severityStyles[finding.severity]
-                        }`}
-                      >
-                        {finding.severity}
-                      </span>
+  <div
+    key={index}
+    className="overflow-hidden rounded-lg border border-white/10"
+  >
+    <div className="flex items-center justify-between gap-3 p-4">
+      <button
+        onClick={() =>
+          setExpanded(expanded === index ? null : index)
+        }
+        className="min-w-0 flex-1 text-left"
+      >
+        <div className="space-y-2">
+          <div className="flex flex-wrap items-center gap-2">
+            <span
+              className={`rounded-md border px-2 py-1 text-xs font-medium ${
+                severityStyles[finding.severity]
+              }`}
+            >
+              {finding.severity}
+            </span>
 
-                      <span className="text-xs text-muted-foreground">
-                        {finding.category}
-                      </span>
+            <span className="text-xs text-muted-foreground">
+              {finding.category}
+            </span>
+          </div>
 
-                      {finding.line !== null && (
-                        <span className="text-xs text-muted-foreground">
-                          Line {finding.line}
-                        </span>
-                      )}
-                    </div>
+          <h3 className="text-sm font-medium">
+            {finding.title}
+          </h3>
+        </div>
+      </button>
 
-                    <h3 className="text-sm font-medium">
-                      {finding.title}
-                    </h3>
-                  </div>
+      <div className="flex shrink-0 items-center gap-3">
+        {finding.line !== null && (
+          <button
+            onClick={() => onSelectLine(finding.line!)}
+            className="rounded-md bg-yellow-500/10 px-2 py-1 text-xs text-yellow-500 hover:bg-yellow-500/20"
+          >
+            Line {finding.line} ↗
+          </button>
+        )}
 
-                  <span className="text-muted-foreground">
-                    {expanded === index ? "−" : "+"}
-                  </span>
-                </button>
+        <button
+          onClick={() =>
+            setExpanded(expanded === index ? null : index)
+          }
+          className="text-muted-foreground"
+        >
+          {expanded === index ? "−" : "+"}
+        </button>
+      </div>
+    </div>
 
-                {expanded === index && (
-                  <div className="space-y-4 border-t border-white/10 p-4">
-                    <div>
-                      <h4 className="mb-1 text-sm font-medium">
-                        Description
-                      </h4>
-                      <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
-                        {finding.description}
-                      </p>
-                    </div>
+    {expanded === index && (
+      <div className="space-y-4 border-t border-white/10 p-4">
+        <div>
+          <h4 className="mb-1 text-sm font-medium">
+            Description
+          </h4>
+          <p className="whitespace-pre-wrap text-sm leading-6 text-muted-foreground">
+            {finding.description}
+          </p>
+        </div>
 
-                    <div>
-                      <h4 className="mb-1 text-sm font-medium">
-                        Suggested Fix
-                      </h4>
-                      <pre className="whitespace-pre-wrap break-words rounded-lg bg-muted/50 p-3 text-sm leading-6">
-                        {finding.suggestion}
-                      </pre>
-                    </div>
-                  </div>
-                )}
-              </div>
-            ))}
+        <div>
+          <h4 className="mb-1 text-sm font-medium">
+            Suggested Fix
+          </h4>
+          <pre className="whitespace-pre-wrap break-words rounded-lg bg-muted/50 p-3 text-sm leading-6">
+            {finding.suggestion}
+          </pre>
+        </div>
+      </div>
+    )}
+  </div>
+))}
 
             {filteredFindings.length === 0 && (
               <p className="rounded-lg bg-muted/40 p-5 text-center text-sm text-muted-foreground">
