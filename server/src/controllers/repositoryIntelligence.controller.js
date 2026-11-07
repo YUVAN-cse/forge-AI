@@ -7,6 +7,10 @@ import {
     buildCodebaseUnderstanding
 } from "../services/codebaseUnderstanding.service.js";
 
+import {
+    generateRepositoryUML,
+} from "../services/uml.service.js";
+
 export const getRepositoryIntelligence = async (req, res) => {
     try {
         const { repositoryId } = req.params;
@@ -33,6 +37,40 @@ export const getRepositoryIntelligence = async (req, res) => {
             "Repository intelligence error:",
             error
         );
+
+        return res.status(500).json({
+            success: false,
+            message: error.message,
+        });
+    }
+};
+
+export const generateRepositoryUMLController = async (req, res) => {
+    try {
+        const { repositoryId } = req.params;
+        const { diagramType } = req.body;
+
+        const result =
+            await getRepositoryTreeForProjectService(
+                repositoryId,
+                req.user._id
+            );
+
+        const uml =
+            await generateRepositoryUML({
+                tree: result.tree,
+                repositoryId,
+                userId: req.user._id,
+                diagramType,
+            });
+
+        return res.status(200).json({
+            success: true,
+            uml,
+        });
+
+    } catch (error) {
+        console.error("UML generation error:", error);
 
         return res.status(500).json({
             success: false,

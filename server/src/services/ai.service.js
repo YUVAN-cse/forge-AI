@@ -19,7 +19,11 @@ const MODEL = "openai/gpt-oss-120b";
 // GENERATE AI RESPONSE
 // ==========================================
 
-const generateAIResponse = async (prompt) => {
+
+const generateAIResponse = async (
+    prompt,
+    options = {}
+) => {
     try {
 
         console.log(
@@ -40,7 +44,9 @@ const generateAIResponse = async (prompt) => {
                     content: prompt,
                 },
             ],
-            temperature: 0.2,
+            temperature: options.temperature ?? 0.2,
+            max_completion_tokens:
+                options.maxCompletionTokens ?? 4096,
         });
 
         return response.choices[0].message.content;
@@ -351,7 +357,62 @@ If no actionable issues are found, return an empty findings array.
     }
 };
 
+// GENERATE UML DIAGRAM
+const generateUMLDiagram = async ({
+    diagramType,
+    files,
+    relationships,
+    architectureInsights,
+}) => {
+    const prompt = `
+Generate a ${diagramType} UML diagram for this software repository.
 
+SOURCE FILES:
+${JSON.stringify(
+    files.map((file) => ({
+        path: file.path,
+        content: file.content,
+    }))
+)}
+
+CODE RELATIONSHIPS:
+${JSON.stringify(relationships)}
+
+ARCHITECTURE INSIGHTS:
+${JSON.stringify(architectureInsights)}
+
+RULES:
+- Generate valid Mermaid syntax.
+- Do not invent classes, methods, components, or relationships.
+- Use only information supported by the supplied source code.
+- If information is unavailable, omit it rather than guessing.
+- Return Mermaid syntax only.
+- Do not include Markdown code fences or explanations.
+`;
+
+    const response = await generateAIResponse(
+        prompt,
+        {
+            maxCompletionTokens: 800,
+            temperature: 0.1,
+        }
+    );
+
+    const mermaid = response
+        .trim()
+        .replace(/^```(?:mermaid)?\s*/i, "")
+        .replace(/\s*```$/, "")
+        .trim();
+
+    if (!mermaid) {
+        throw new Error("Failed to generate UML diagram.");
+    }
+
+    return {
+        diagramType,
+        mermaid,
+    };
+};
 
 // ==========================================
 // EXPORTS
@@ -363,4 +424,5 @@ export {
     generateProjectTasks,
     generateRepositoryAnswer,
     generateCodeReview,
+    generateUMLDiagram
 };
