@@ -29,9 +29,9 @@ const SUPPORTED_DIAGRAMS = [
     "component",
 ];
 
-const MAX_FILES = 8;
-const MAX_FILE_CHARS = 1000;
-const MAX_TOTAL_CHARS = 4500;
+const MAX_FILES = 5;
+const MAX_FILE_CHARS = 900;
+const MAX_TOTAL_CHARS = 4000;
 
 const getFilePriority = (path, diagramType) => {
     const value = path.toLowerCase();

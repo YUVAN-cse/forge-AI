@@ -16,3 +16,18 @@ export const getRepositoryFile = async (
 
     return response.data.file;
 };
+
+
+export const generateRepositoryUML = async (
+    repositoryId: string,
+    diagramType: "class" | "sequence" | "component"
+) => {
+    const response = await api.post(
+        `/repositories/${repositoryId}/uml`,
+        {
+            diagramType,
+        }
+    );
+
+    return response.data.uml;
+};

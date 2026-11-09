@@ -358,6 +358,7 @@ If no actionable issues are found, return an empty findings array.
 };
 
 // GENERATE UML DIAGRAM
+
 const generateUMLDiagram = async ({
     diagramType,
     files,
@@ -365,7 +366,7 @@ const generateUMLDiagram = async ({
     architectureInsights,
 }) => {
     const prompt = `
-Generate a ${diagramType} UML diagram for this software repository.
+Generate a complete Mermaid ${diagramType} UML diagram for this repository.
 
 SOURCE FILES:
 ${JSON.stringify(
@@ -382,21 +383,25 @@ ARCHITECTURE INSIGHTS:
 ${JSON.stringify(architectureInsights)}
 
 RULES:
-- Generate valid Mermaid syntax.
+- Return valid Mermaid syntax.
+- Include only entities and relationships supported by the source.
 - Do not invent classes, methods, components, or relationships.
-- Use only information supported by the supplied source code.
-- If information is unavailable, omit it rather than guessing.
-- Return Mermaid syntax only.
-- Do not include Markdown code fences or explanations.
+- Keep the diagram concise. Prioritize the most important entities.
+- Every declaration must be complete.
+- Close all braces and blocks.
+- Never stop midway through a declaration.
+- Return Mermaid syntax only, without Markdown fences or explanations.
+- Generate relationships using the supplied CODE RELATIONSHIPS.
+- Use appropriate Mermaid relationship notation.
+- Include relationships only when explicitly supported by the supplied data.
+- Do not create relationships merely because two classes appear related by name.
+- If no verified relationships exist, return the classes without relationships.
 `;
 
-    const response = await generateAIResponse(
-        prompt,
-        {
-            maxCompletionTokens: 800,
-            temperature: 0.1,
-        }
-    );
+    const response = await generateAIResponse(prompt, {
+        maxCompletionTokens: 1200,
+        temperature: 0.1,
+    });
 
     const mermaid = response
         .trim()
@@ -404,8 +409,14 @@ RULES:
         .replace(/\s*```$/, "")
         .trim();
 
-    if (!mermaid) {
-        throw new Error("Failed to generate UML diagram.");
+    if (!mermaid || !mermaid.startsWith("classDiagram") &&
+        diagramType === "class") {
+        throw new Error("Invalid UML diagram generated.");
+    }
+
+    if (mermaid.includes("{") &&
+        mermaid.split("{").length !== mermaid.split("}").length) {
+        throw new Error("Incomplete UML diagram generated.");
     }
 
     return {
@@ -413,6 +424,7 @@ RULES:
         mermaid,
     };
 };
+
 
 // ==========================================
 // EXPORTS

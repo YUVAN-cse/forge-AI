@@ -11,6 +11,7 @@ import RepositoryCodeReview from "@/components/intelligence/RepositoryCodeReview
 
 import { getRepositoryTree } from "@/services/github.service";
 import { getRepositoryFile } from "@/services/repository.service";
+import RepositoryUML from "@/components/repositories/RepositoryUML";
 
 interface RepositoryTreeItem {
     path: string;
@@ -142,6 +143,10 @@ export default function RepositoryExplorerPage() {
             {/* REPOSITORY ANALYSIS */}
 
             <RepositoryAnalysis
+                repositoryId={repositoryId}
+            />
+
+            <RepositoryUML
                 repositoryId={repositoryId}
             />
 
