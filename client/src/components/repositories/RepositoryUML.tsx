@@ -18,6 +18,9 @@ mermaid.initialize({
     securityLevel: "strict",
 });
 
+
+
+
 export default function RepositoryUML({
     repositoryId,
 }: RepositoryUMLProps) {
@@ -83,6 +86,127 @@ export default function RepositoryUML({
         renderDiagram();
     }, [diagram]);
 
+
+    
+const handleExportSVG = () => {
+    const svg = diagramRef.current?.querySelector("svg");
+
+    if (!svg) return;
+
+    const svgData = new XMLSerializer().serializeToString(svg);
+
+    const blob = new Blob(
+        [svgData],
+        { type: "image/svg+xml;charset=utf-8" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+
+    link.href = url;
+    link.download = `forgeai-${diagramType}-diagram.svg`;
+    link.click();
+
+    URL.revokeObjectURL(url);
+};
+
+
+
+const handleExportPNG = async () => {
+    const svg = diagramRef.current?.querySelector("svg");
+
+    if (!svg) return;
+
+    try {
+        const clonedSvg = svg.cloneNode(true) as SVGSVGElement;
+
+        const viewBox = svg.viewBox.baseVal;
+
+        const width = viewBox.width || svg.clientWidth || 1200;
+        const height = viewBox.height || svg.clientHeight || 800;
+
+        clonedSvg.setAttribute("width", `${width}`);
+        clonedSvg.setAttribute("height", `${height}`);
+        clonedSvg.setAttribute("xmlns", "http://www.w3.org/2000/svg");
+
+        // Remove external images and linked resources
+        clonedSvg.querySelectorAll("image").forEach((element) => {
+            element.remove();
+        });
+
+        clonedSvg.querySelectorAll("foreignObject").forEach((element) => {
+            element.remove();
+        });
+
+        // Remove external CSS references
+        clonedSvg.querySelectorAll("style").forEach((style) => {
+            style.textContent = style.textContent?.replace(
+                /url\((?!#)[^)]+\)/g,
+                "none"
+            ) || "";
+        });
+
+        const svgData = new XMLSerializer().serializeToString(clonedSvg);
+
+        const svgUrl = URL.createObjectURL(
+            new Blob([svgData], {
+                type: "image/svg+xml;charset=utf-8",
+            })
+        );
+
+        const image = new Image();
+        image.src = svgUrl;
+
+        await new Promise<void>((resolve, reject) => {
+            image.onload = () => resolve();
+            image.onerror = () => reject(
+                new Error("Failed to load SVG")
+            );
+        });
+
+        const canvas = document.createElement("canvas");
+
+        canvas.width = width * 2;
+        canvas.height = height * 2;
+
+        const context = canvas.getContext("2d");
+
+        if (!context) {
+            throw new Error("Canvas context unavailable");
+        }
+
+        context.fillStyle = "#ffffff";
+        context.fillRect(0, 0, canvas.width, canvas.height);
+
+        context.scale(2, 2);
+        context.drawImage(image, 0, 0, width, height);
+
+        const pngBlob = await new Promise<Blob>((resolve, reject) => {
+            canvas.toBlob((blob) => {
+                if (blob) resolve(blob);
+                else reject(new Error("PNG conversion failed"));
+            }, "image/png");
+        });
+
+        const pngUrl = URL.createObjectURL(pngBlob);
+        const link = document.createElement("a");
+
+        link.href = pngUrl;
+        link.download = `forgeai-${diagramType}-diagram.png`;
+        link.click();
+
+        URL.revokeObjectURL(pngUrl);
+        URL.revokeObjectURL(svgUrl);
+
+    } catch (error) {
+        console.error("PNG export failed:", error);
+        setError("PNG export failed. Please try SVG export.");
+    }
+};
+
+
+
+
     return (
         <div className="space-y-5 rounded-xl border border-gray-800 bg-gray-950 p-6">
 
@@ -134,14 +258,36 @@ export default function RepositoryUML({
                 </div>
             )}
 
-            {diagram && (
-                <div className="overflow-auto rounded-lg border border-gray-800 bg-gray-900 p-5">
-                    <div
-                        ref={diagramRef}
-                        className="flex min-h-50 justify-center"
-                    />
-                </div>
-            )}
+            
+{diagram && (
+    <div className="space-y-4">
+
+        <div className="flex justify-end gap-3">
+            <button
+                onClick={handleExportSVG}
+                className="rounded-lg border border-gray-700 px-4 py-2 text-sm text-white hover:bg-gray-800"
+            >
+                Export SVG
+            </button>
+
+            <button
+                onClick={handleExportPNG}
+                className="rounded-lg bg-blue-600 px-4 py-2 text-sm text-white hover:bg-blue-700"
+            >
+                Export PNG
+            </button>
+        </div>
+
+        <div className="overflow-auto rounded-lg border border-gray-800 bg-gray-900 p-5">
+            <div
+                ref={diagramRef}
+                className="flex min-h-50 justify-center"
+            />
+        </div>
+
+    </div>
+)}
+
 
         </div>
     );
