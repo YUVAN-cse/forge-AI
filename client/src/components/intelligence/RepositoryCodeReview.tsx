@@ -233,7 +233,7 @@ export default function RepositoryCodeReview({
           <h4 className="mb-1 text-sm font-medium">
             Suggested Fix
           </h4>
-          <pre className="whitespace-pre-wrap break-words rounded-lg bg-muted/50 p-3 text-sm leading-6">
+          <pre className="whitespace-pre-wrap wrap-break-word rounded-lg bg-muted/50 p-3 text-sm leading-6">
             {finding.suggestion}
           </pre>
         </div>

@@ -21,6 +21,7 @@ mermaid.initialize({
 
 
 
+
 export default function RepositoryUML({
     repositoryId,
 }: RepositoryUMLProps) {

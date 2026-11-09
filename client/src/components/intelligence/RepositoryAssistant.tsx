@@ -102,7 +102,7 @@ export default function RepositoryAssistant({
                 </div>
             </div>
 
-            <div className="max-h-[500px] min-h-[320px] space-y-4 overflow-y-auto p-5">
+            <div className="max-h-125 min-h-80 space-y-4 overflow-y-auto p-5">
                 {messages.length === 0 && (
                     <div className="space-y-5 py-8">
                         <div className="text-center">
@@ -159,7 +159,7 @@ export default function RepositoryAssistant({
                                     : "border border-gray-800 bg-gray-950 text-gray-200"
                             }`}
                         >
-                            <p className="whitespace-pre-wrap break-words text-sm leading-7">
+                            <p className="whitespace-pre-wrap wrap-break-word text-sm leading-7">
                                 {message.content}
                             </p>
 
